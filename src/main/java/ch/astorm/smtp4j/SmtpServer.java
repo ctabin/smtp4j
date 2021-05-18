@@ -178,7 +178,7 @@ public class SmtpServer implements AutoCloseable {
         public void run() {
             while(serverSocket!=null) {
                 try(Socket socket = serverSocket.accept();
-                    Scanner input = new Scanner(new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1)).useDelimiter(SmtpProtocolConstants.CRLF);
+                    BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1));
                     PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1))) {
                     synchronized(localStorage) { SmtpTransactionHandler.handle(socket, input, output, messageHandler); }
                 } catch(IOException ioe) {

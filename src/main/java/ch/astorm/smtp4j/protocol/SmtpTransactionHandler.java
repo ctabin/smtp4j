@@ -4,23 +4,23 @@ package ch.astorm.smtp4j.protocol;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 /**
  * Handles the SMTP protocol.
  */
 public class SmtpTransactionHandler {
     private Socket socket;
-    private Scanner input;
+    private BufferedReader input;
     private PrintWriter output;
     private SmtpMessageHandler handler;
 
-    private SmtpTransactionHandler(Socket socket, Scanner input, PrintWriter output, SmtpMessageHandler handler) {
+    private SmtpTransactionHandler(Socket socket, BufferedReader input, PrintWriter output, SmtpMessageHandler handler) {
         this.socket = socket;
         this.input = input;
         this.output = output;
