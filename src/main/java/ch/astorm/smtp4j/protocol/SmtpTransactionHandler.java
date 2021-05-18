@@ -35,12 +35,12 @@ public class SmtpTransactionHandler {
      * @param output The output writer.
      * @param handler The message handler.
      */
-    public static void handle(Socket socket, Scanner input, PrintWriter output, SmtpMessageHandler handler) throws IOException {
+    public static void handle(Socket socket, BufferedReader input, PrintWriter output, SmtpMessageHandler handler) throws IOException, SmtpProtocolException {
         SmtpTransactionHandler sth = new SmtpTransactionHandler(socket, input, output, handler);
         sth.execute();
     }
 
-    private void execute() throws IOException {
+    private void execute() throws SmtpProtocolException {
         //inform the client about the SMTP server state
         reply(SmtpProtocolConstants.CODE_CONNECT, "localhost smtp4j server ready");
 
@@ -67,7 +67,7 @@ public class SmtpTransactionHandler {
     private List<String> recipients;
     private StringBuilder smtpMessageContent;
 
-    private void readTransaction() throws IOException {
+    private void readTransaction() throws SmtpProtocolException {
         while(true) {
             SmtpCommand command = nextCommand();
             Type commandType = command.getType();
@@ -149,12 +149,17 @@ public class SmtpTransactionHandler {
         this.smtpMessageContent = null;
     }
 
-    private String nextLine() throws IOException {
-        if(!input.hasNext()) { throw new IOException("Unexpected end of stream (no more token)"); }
-        return input.next();
+    private String nextLine() throws SmtpProtocolException {
+        try {
+            String line = input.readLine();
+            if(line==null) { throw new SmtpProtocolException("Unexpected end of stream (no more line)"); }
+            return line;
+        } catch(IOException ioe) {
+            throw new SmtpProtocolException("I/O exception", ioe);
+        }
     }
     
-    private SmtpCommand nextCommand() throws IOException {
+    private SmtpCommand nextCommand() throws SmtpProtocolException {
         SmtpCommand command = SmtpCommand.parse(nextLine());
         while(command!=null) {
             Type commandType = command.getType();
@@ -166,11 +171,10 @@ public class SmtpTransactionHandler {
             else if(commandType==Type.RESET) { resetState(); reply(SmtpProtocolConstants.CODE_OK, "OK"); }
             else { return command; }
 
-            if(!input.hasNext()) { throw new IOException("Unexpected end of stream (no more token)"); }
             command = SmtpCommand.parse(nextLine());
         }
 
-        throw new IOException("Unexpected end of stream (no more command)");
+        throw new SmtpProtocolException("Unexpected end of stream (no more command)");
     }
 
     private void reply(int code, String message) {
