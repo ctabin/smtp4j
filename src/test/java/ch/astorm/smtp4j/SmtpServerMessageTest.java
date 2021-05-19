@@ -42,7 +42,7 @@ public class SmtpServerMessageTest {
     @BeforeAll
     public static void init() throws Exception {
         SmtpServerBuilder builder = new SmtpServerBuilder();
-        smtpServer = builder.withPort(1025).start();
+        smtpServer = builder.withPort(1025).withBufferSize(10 * 1024 * 1024).start();
 
         smtpProps = new Properties();
         smtpProps.setProperty("mail.smtp.host", "localhost");
@@ -56,7 +56,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testSimpleMessage() throws Exception {
-        Session session = Session.getDefaultInstance(smtpProps);
+        Session session = Session.getInstance(smtpProps);
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("from@local.host"));
@@ -90,7 +90,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testMessageWithAttachement() throws Exception {
-        Session session = Session.getDefaultInstance(smtpProps);
+        Session session = Session.getInstance(smtpProps);
         MimeMessage msg = new MimeMessage(session);
 
         Date sentDate = new SimpleDateFormat("dd.MM.yyyy HH:mm").parse("31.12.2020 23:59");
@@ -147,7 +147,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testMessageWithMultipleAttachements() throws Exception {
-        Session session = Session.getDefaultInstance(smtpProps);
+        Session session = Session.getInstance(smtpProps);
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("source@smtp4j.local"));
@@ -252,7 +252,7 @@ public class SmtpServerMessageTest {
     
     @Test
     public void testMessageMultipartWithoutBody() throws Exception {
-        Session session = Session.getDefaultInstance(smtpProps);
+        Session session = Session.getInstance(smtpProps);
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("info@smtp4j.local"));
@@ -298,7 +298,7 @@ public class SmtpServerMessageTest {
     
     @Test
     public void testMessageMultipartWithMultipleBody() throws Exception {
-        Session session = Session.getDefaultInstance(smtpProps);
+        Session session = Session.getInstance(smtpProps);
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("info@smtp4j.local"));

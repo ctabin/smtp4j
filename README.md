@@ -39,7 +39,7 @@ try(SmtpServer server = builder.withPort(1025).start()) {
     smtpProps.setProperty("mail.smtp.port", "1025");
     
     /* create an SMTP message */
-    Session session = Session.getDefaultInstance(smtpProps);
+    Session session = Session.getInstance(smtpProps);
     MimeMessage msg = new MimeMessage(session);
     msg.setFrom(new InternetAddress("noreply@local.host"));
     msg.addRecipient(RecipientType.TO, new InternetAddress("cedric@smtp4j.com"));
