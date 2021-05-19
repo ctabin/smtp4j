@@ -36,12 +36,12 @@ public class SmtpServerBufferTest {
     
     @Test
     public void testMessageLargeAttachementWithSmallBuffer() throws Exception {
-        try(SmtpServer smtpServer = new SmtpServerBuilder().withBufferSize(1024).start()) {
+        try(SmtpServer smtpServer = new SmtpServerBuilder().start()) {
             Properties smtpProps = new Properties();
             smtpProps.setProperty("mail.smtp.host", "localhost");
             smtpProps.setProperty("mail.smtp.port", ""+smtpServer.getPort());
             
-            Session session = Session.getDefaultInstance(smtpProps);
+            Session session = Session.getInstance(smtpProps);
             MimeMessage msg = new MimeMessage(session);
 
             msg.setFrom(new InternetAddress("source@smtp4j.local"));
