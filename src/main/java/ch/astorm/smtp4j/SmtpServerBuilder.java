@@ -9,7 +9,6 @@ import java.io.IOException;
  */
 public class SmtpServerBuilder {
     private int port;
-    private int bufferSize;
     private SmtpMessageHandler handler;
 
     /**
@@ -36,18 +35,6 @@ public class SmtpServerBuilder {
         this.handler = messageHandler;
         return this;
     }
-    
-    /**
-     * Defines the buffer size of the underlying socket.
-     * 
-     * @param size The size (in bytes).
-     * @return This builder.
-     * @see SmtpServer#setBufferSize(int)
-     */
-    public SmtpServerBuilder withBufferSize(int size) {
-        this.bufferSize = size;
-        return this;
-    }
 
     /**
      * Builds the {@code SmtpServer}.
@@ -57,7 +44,6 @@ public class SmtpServerBuilder {
     public SmtpServer build() {
         SmtpServer server = new SmtpServer(port);
         server.setMessageHandler(handler);
-        if(bufferSize>0) { server.setBufferSize(bufferSize); }
         return server;
     }
 

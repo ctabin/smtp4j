@@ -122,7 +122,6 @@ public class SmtpTransactionHandler {
                         smtpMessageContent.append(currentLine).append(SmtpProtocolConstants.CRLF);
                     }
 
-                    reply(SmtpProtocolConstants.CODE_OK, "OK");
                     currentLine = nextLine();
                 }
 
@@ -174,7 +173,7 @@ public class SmtpTransactionHandler {
             command = SmtpCommand.parse(nextLine());
         }
 
-        throw new SmtpProtocolException("Unexpected end of stream (no more command)");
+        throw new SmtpProtocolException("Unexpected end of exchange (no more command)");
     }
 
     private void reply(int code, String message) {
