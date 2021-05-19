@@ -35,16 +35,13 @@ how it can be used:
 SmtpServerBuilder builder = new SmtpServerBuilder();
 try(SmtpServer server = builder.withPort(1025).start()) {
     
-    /* create an SMTP message */
-    Session session = server.createSession();
-    MimeMessage msg = new MimeMessage(session);
-    msg.setFrom(new InternetAddress("noreply@local.host"));
-    msg.addRecipient(RecipientType.TO, new InternetAddress("cedric@smtp4j.com"));
-    msg.setSubject("My first message !", StandardCharsets.UTF_8.name());
-    msg.setText("Hello,\r\n\r\nGreetings from smtp4j !\r\n\r\nBy.", StandardCharsets.UTF_8.name());
-
-    /* send the message */
-    Transport.send(msg);
+    /* create and send an SMTP message */
+    MimeMessageBuilder messageBuilder = new MimeMessageBuilder(server);
+    messageBuilder.from("source@smtp4j.local").
+                   to("target@smtp4j.local").
+                   subject("Hello, world !").
+                   body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.");
+    nessageBuilder.send();
 
     /* retrieve the sent message from smtp4j */
     List<SmtpMessage> messages = server.getReceivedMessages();
@@ -233,3 +230,41 @@ try(SmtpServer smtpServer = new SmtpServerBuilder().withBufferSize(largeBuffer).
 
 Note that the buffer size cannot be changed while the server is running.
 
+#### Client-side messages
+
+The API includes a utility class to build SMTP messages from the client side
+that can easily be sent to smtp4j. The [MimeMessageBuilder](src/main/java/ch/astorm/smtp4j/util/MimeMessageBuilder.java)
+class provides easy-to-use methods to create a Multipart MIME message:
+
+```java
+/* SMTP server is started on port 1025 */
+SmtpServerBuilder builder = new SmtpServerBuilder();
+try(SmtpServer server = builder.withPort(1025).start()) {
+    
+    /* create and send an SMTP message */
+    MimeMessageBuilder messageBuilder = new MimeMessageBuilder(server).
+     from("source@smtp4j.local").
+     to("to1@smtp4j.local").
+     to("to2@smtp4j.local").
+     cc("cc1@smtp4j.local").
+     cc("cc2@smtp4j.local").
+     bcc("bcc@smtp4j.local").
+     at("31.12.2020 23:59:59").
+     subject("Hello, world !").
+     body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.").
+     attachment(new File("file.pdf"));
+
+    //build the message and send it to smtp4j
+    nessageBuilder.send();
+    
+    //process the received message
+    //...
+}
+```
+
+It is also possible to use this builder in a production application by using the
+dedicated `Session` constructor:
+
+```java
+MimeMessageBuilder messageBuilder = new MimeMessageBuilder(session);
+```
