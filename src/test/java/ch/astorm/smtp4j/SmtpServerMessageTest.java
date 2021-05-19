@@ -160,7 +160,6 @@ public class SmtpServerMessageTest {
         Multipart mp = new MimeMultipart();
         mp.addBodyPart(bodyPart);
 
-        String staticStr = "some TXT Content. #/";
         String dynContent = "";
         {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -169,7 +168,7 @@ public class SmtpServerMessageTest {
                 zos.closeEntry();
                 zos.putNextEntry(new ZipEntry("content/file.txt"));
                 for(int i=0 ; i<5000 ; ++i) {
-                    String toAdd = staticStr;
+                    String toAdd = "some TXT Content. #/";;
                     if(i%100==0 && i>0) { toAdd += "\r\n"; }
 
                     dynContent += toAdd;
@@ -186,8 +185,12 @@ public class SmtpServerMessageTest {
             mp.addBodyPart(attachZipPart);
         }
 
-        String fileContent = "This is some file content. - Enjoy !";
+        String fileContent;
         {
+            StringBuilder builder = new StringBuilder(1024);
+            for(int i=0 ; i<5000 ; ++i) { builder.append("This is some file content. - Enjoy !\r\n"); }
+            fileContent = builder.toString();
+            
             MimeBodyPart attachTxtPart = new MimeBodyPart();
             attachTxtPart.setDataHandler(new DataHandler(new ByteArrayDataSource(fileContent.getBytes(StandardCharsets.UTF_8), "text/plain")));
             attachTxtPart.setFileName("data.txt");
@@ -232,10 +235,15 @@ public class SmtpServerMessageTest {
             SmtpAttachment attachment = attachments.get(1);
             assertEquals("data.txt", attachment.getFilename());
 
+            StringBuilder builder = new StringBuilder();
             try(BufferedReader reader = new BufferedReader(new InputStreamReader(attachment.openStream()))) {
                 String str = reader.readLine();
-                assertEquals(fileContent, str);
+                while(str!=null) {
+                    builder.append(str).append("\r\n");
+                    str = reader.readLine();
+                }
             }
+            assertEquals(fileContent, builder.toString());
         }
 
         smtpServer.clearReceivedMessages();

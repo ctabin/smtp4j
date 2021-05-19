@@ -9,6 +9,7 @@ import java.io.IOException;
  */
 public class SmtpServerBuilder {
     private int port;
+    private int bufferSize;
     private SmtpMessageHandler handler;
 
     /**
@@ -17,6 +18,7 @@ public class SmtpServerBuilder {
      *
      * @param port The port.
      * @return This builder.
+     * @see SmtpServer#SmtpServer(int)
      */
     public SmtpServerBuilder withPort(int port) {
         this.port = port;
@@ -28,9 +30,22 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
+     * @see SmtpServer#setMessageHandler(ch.astorm.smtp4j.core.SmtpMessageHandler)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
+        return this;
+    }
+    
+    /**
+     * Defines the buffer size of the underlying socket.
+     * 
+     * @param size The size (in bytes).
+     * @return This builder.
+     * @see SmtpServer#setBufferSize(int)
+     */
+    public SmtpServerBuilder withBufferSize(int size) {
+        this.bufferSize = size;
         return this;
     }
 
@@ -42,6 +57,7 @@ public class SmtpServerBuilder {
     public SmtpServer build() {
         SmtpServer server = new SmtpServer(port);
         server.setMessageHandler(handler);
+        if(bufferSize>0) { server.setBufferSize(bufferSize); }
         return server;
     }
 
