@@ -13,7 +13,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
@@ -29,7 +28,6 @@ public class SmtpServer implements AutoCloseable {
     private static final Logger LOG = Logger.getLogger(SmtpServer.class.getName());
 
     private int port;
-    private int bufferSize = 1 * 1024 * 1024; //1 Mo
     private final SmtpMessageStorage localStorage;
 
     private volatile SmtpMessageHandler messageHandler;
@@ -102,32 +100,6 @@ public class SmtpServer implements AutoCloseable {
      */
     public SmtpMessageHandler getMessageHandler() {
         return messageHandler;
-    }
-
-    /**
-     * Defines the socket buffer size (in bytes).
-     * The buffer size impacts the amount of data the underlying Socket used for the communication
-     * can store. A buffer too small regarding the message size can lead to data loss and hence disregarding
-     * incoming messages.
-     * <p>By default, this value is set to 1 Mo and cannot be change while the server
-     * is running.</p>
-     * 
-     * @param size The socket buffer size (must greater than zero).
-     */
-    public void setBufferSize(int size) {
-        if(!isClosed()) { throw new IllegalStateException("Cannot change size while the server is running"); }
-        if(size<=0) { throw new IllegalArgumentException("Invalid size: "+size); }
-        this.bufferSize = size;
-    }
-    
-    /**
-     * Returns the socket buffer size (in bytes).
-     * By default, this value is set to 1 Mo.
-     * 
-     * @return The buffer size.
-     */
-    public int getBufferSize() {
-        return bufferSize;
     }
     
     /**
@@ -203,8 +175,6 @@ public class SmtpServer implements AutoCloseable {
             serverSocket = new ServerSocket(port);
         }
 
-        serverSocket.setReceiveBufferSize(bufferSize);
-        
         localThread = new Thread(new SmtpPacketListener());
         localThread.start();
     }
@@ -238,14 +208,12 @@ public class SmtpServer implements AutoCloseable {
         @Override
         public void run() {
             while(serverSocket!=null) {
-                int bufferSize = 0;
                 try(Socket socket = serverSocket.accept();
                     BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1));
                     PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1))) {
-                    bufferSize = socket.getReceiveBufferSize();
                     synchronized(localStorage) { SmtpTransactionHandler.handle(socket, input, output, messageHandler); }
                 } catch(SmtpProtocolException spe) {
-                    LOG.log(Level.WARNING, "Protocol Exception (buffer size: "+bufferSize+")", spe);
+                    LOG.log(Level.WARNING, "Protocol Exception", spe);
                 } catch(IOException ioe) {
                     /* can be generally safely ignored because occurs when the server is being closed */
                     LOG.log(Level.FINER, "I/O Exception", ioe);

@@ -43,7 +43,7 @@ public class SmtpServerMessageTest {
     @BeforeAll
     public static void init() throws Exception {
         SmtpServerBuilder builder = new SmtpServerBuilder();
-        smtpServer = builder.withPort(1025).withBufferSize(10 * 1024 * 1024).start();
+        smtpServer = builder.withPort(1025).start();
     }
 
     @AfterAll
@@ -241,7 +241,7 @@ public class SmtpServerMessageTest {
         String fileContent;
         {
             StringBuilder builder = new StringBuilder(1024);
-            builder.append("This is some file content. - Enjoy !\r\n");
+            for(int i=0 ; i<50000 ; ++i) { builder.append("This is some file content. - Enjoy !\r\n"); }
             fileContent = builder.toString();
             
             messageBuilder.attachment("data.txt", "text/plain", new ByteArrayInputStream(fileContent.getBytes(StandardCharsets.UTF_8)));
@@ -294,6 +294,33 @@ public class SmtpServerMessageTest {
             }
             assertEquals(fileContent, builder.toString());
         }
+
+        smtpServer.clearReceivedMessages();
+        assertTrue(smtpServer.getReceivedMessages().isEmpty());
+    }
+    
+    @Test
+    public void testMessageLargeAttachement() throws Exception {
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
+                from("source@smtp4j.local").
+                to("target@smtp4j.local").
+                subject("Message with multiple attachments").
+                body("Message with multiple attachments");
+
+        String fileContent;
+        {
+            StringBuilder builder = new StringBuilder(1024);
+            for(int i=0 ; i<10000 ; ++i) { builder.append("This is some file content. - Enjoy !\r\n"); }
+            fileContent = builder.toString();
+
+            messageBuilder.attachment("data.txt", "text/plain", new ByteArrayInputStream(fileContent.getBytes(StandardCharsets.UTF_8)));
+        }
+
+        messageBuilder.send();
+
+        //since the buffer is too low, we expect here that the data has been dropped
+        //and hence the whole message has been discarded
+        assertEquals(1, smtpServer.getReceivedMessages().size());
 
         smtpServer.clearReceivedMessages();
         assertTrue(smtpServer.getReceivedMessages().isEmpty());
