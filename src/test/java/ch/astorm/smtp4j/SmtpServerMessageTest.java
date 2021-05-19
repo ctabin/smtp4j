@@ -3,7 +3,9 @@ package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpAttachment;
 import ch.astorm.smtp4j.core.SmtpMessage;
+import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -12,7 +14,6 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.AfterAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.BeforeAll;
@@ -79,6 +81,72 @@ public class SmtpServerMessageTest {
         assertNotNull(message.getMimeMessage());
         assertNotNull(message.getRawMimeContent());
 
+        smtpServer.clearReceivedMessages();
+        assertTrue(smtpServer.getReceivedMessages().isEmpty());
+    }
+    
+    @Test
+    public void testSimpleMessageMultiPart() throws Exception {
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
+        messageBuilder.from(new InternetAddress("from@local.host")).
+                       to(new InternetAddress("target1@local.host")).
+                       to(new InternetAddress("target2@local.host")).
+                       cc(new InternetAddress("target3@local.host")).
+                       bcc(new InternetAddress("target4@local.host")).
+                       subject("Subject éèôîï & Â%=", StandardCharsets.UTF_8).
+                       body("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", StandardCharsets.UTF_8);
+        messageBuilder.send();
+        
+        assertEquals(1, smtpServer.getReceivedMessages().size());
+
+        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        assertEquals("from@local.host", message.getFrom());
+        assertEquals("from@local.host", message.getSourceFrom());
+        assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
+        assertEquals(Arrays.asList("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
+        assertEquals(Arrays.asList("target3@local.host"), message.getRecipients(RecipientType.CC));
+        assertTrue(message.getRecipients(RecipientType.BCC).isEmpty());
+        assertEquals("Subject éèôîï & Â%=", message.getSubject());
+        assertEquals("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", message.getBody());
+        assertTrue(message.getAttachments().isEmpty());
+        assertNotNull(message.getMimeMessage());
+        assertNotNull(message.getRawMimeContent());
+
+        smtpServer.clearReceivedMessages();
+        assertTrue(smtpServer.getReceivedMessages().isEmpty());
+    }
+    
+    @Test
+    public void testSimpleMessageMultiPartNoCharset() throws Exception {
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
+        messageBuilder.from("from@local.host").
+                       to("target1@local.host").
+                       to("target2@local.host").
+                       cc("target3@local.host").
+                       bcc("target4@local.host").
+                       at("31.12.2020 23:59:59").
+                       subject("Subject éèôîï & Â%=").
+                       body("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.");
+        messageBuilder.send();
+        
+        assertThrows(IllegalStateException.class, () -> messageBuilder.send());
+        
+        assertEquals(1, smtpServer.getReceivedMessages().size());
+
+        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        assertEquals("from@local.host", message.getFrom());
+        assertEquals("from@local.host", message.getSourceFrom());
+        assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
+        assertEquals(Arrays.asList("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
+        assertEquals(Arrays.asList("target3@local.host"), message.getRecipients(RecipientType.CC));
+        assertTrue(message.getRecipients(RecipientType.BCC).isEmpty());
+        assertEquals(new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").parse("31.12.2020 23:59:59"), message.getSentDate());
+        assertEquals("Subject éèôîï & Â%=", message.getSubject());
+        assertEquals("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", message.getBody());
+        assertTrue(message.getAttachments().isEmpty());
+        assertNotNull(message.getMimeMessage());
+        assertNotNull(message.getRawMimeContent());
+        
         smtpServer.clearReceivedMessages();
         assertTrue(smtpServer.getReceivedMessages().isEmpty());
     }
@@ -142,19 +210,12 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testMessageWithMultipleAttachements() throws Exception {
-        Session session = smtpServer.createSession();
-        MimeMessage msg = new MimeMessage(session);
-
-        msg.setFrom(new InternetAddress("source@smtp4j.local"));
-        msg.addRecipient(RecipientType.TO, new InternetAddress("targer@smtp4j.local"));
-        msg.setSubject("Message with multiple attachments", StandardCharsets.UTF_8.name());
-
-        MimeBodyPart bodyPart = new MimeBodyPart();
-        bodyPart.setText("There is your content", StandardCharsets.UTF_8.name());
-
-        Multipart mp = new MimeMultipart();
-        mp.addBodyPart(bodyPart);
-
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
+        messageBuilder.from("source@smtp4j.local").
+                to("target@smtp4j.local").
+                subject("Message with multiple attachments", StandardCharsets.UTF_8).
+                body("There is your content", StandardCharsets.UTF_8);
+        
         String dynContent = "";
         {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -174,10 +235,7 @@ public class SmtpServerMessageTest {
                 zos.closeEntry();
             }
 
-            MimeBodyPart attachZipPart = new MimeBodyPart();
-            attachZipPart.setDataHandler(new DataHandler(new ByteArrayDataSource(baos.toByteArray(), "application/octet-stream")));
-            attachZipPart.setFileName("file.zip");
-            mp.addBodyPart(attachZipPart);
+            messageBuilder.attachment("file.zip", "application/octed-stream", new ByteArrayInputStream(baos.toByteArray()));
         }
 
         String fileContent;
@@ -186,15 +244,11 @@ public class SmtpServerMessageTest {
             for(int i=0 ; i<5000 ; ++i) { builder.append("This is some file content. - Enjoy !\r\n"); }
             fileContent = builder.toString();
             
-            MimeBodyPart attachTxtPart = new MimeBodyPart();
-            attachTxtPart.setDataHandler(new DataHandler(new ByteArrayDataSource(fileContent.getBytes(StandardCharsets.UTF_8), "text/plain")));
-            attachTxtPart.setFileName("data.txt");
-            mp.addBodyPart(attachTxtPart);
+            messageBuilder.attachment("data.txt", "text/plain", new ByteArrayInputStream(fileContent.getBytes(StandardCharsets.UTF_8)));
         }
 
-        msg.setContent(mp);
-
-        Transport.send(msg);
+        MimeMessage mimeMessage = messageBuilder.send();
+        assertNotNull(mimeMessage);
 
         assertEquals(1, smtpServer.getReceivedMessages().size());
 
