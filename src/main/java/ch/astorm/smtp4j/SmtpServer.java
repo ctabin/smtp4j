@@ -4,8 +4,9 @@ package ch.astorm.smtp4j;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessageStorage;
-import ch.astorm.smtp4j.protocol.SmtpProtocolConstants;
+import ch.astorm.smtp4j.protocol.SmtpProtocolException;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -14,13 +15,16 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Simple SMTP server.
  * @see SmtpServerBuilder
  */
 public class SmtpServer implements AutoCloseable {
+    private static final Logger LOG = Logger.getLogger(SmtpServer.class.getName());
+
     private int port;
     private final SmtpMessageStorage localStorage;
 
@@ -178,11 +182,14 @@ public class SmtpServer implements AutoCloseable {
         public void run() {
             while(serverSocket!=null) {
                 try(Socket socket = serverSocket.accept();
-                    Scanner input = new Scanner(new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1)).useDelimiter(SmtpProtocolConstants.CRLF);
+                    BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1));
                     PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1))) {
                     synchronized(localStorage) { SmtpTransactionHandler.handle(socket, input, output, messageHandler); }
+                } catch(SmtpProtocolException spe) {
+                    LOG.log(Level.WARNING, "Protocol Exception", spe);
                 } catch(IOException ioe) {
-                    /* ignored */
+                    /* can be generally safely ignored because occurs when the server is being closed */
+                    LOG.log(Level.FINER, "I/O Exception", ioe);
                 }
             }
         }
