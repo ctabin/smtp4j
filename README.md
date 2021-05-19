@@ -4,12 +4,14 @@ Simple API to fake an SMTP server for Unit testing (and more).
 
 ## About this project
 
-This API is inspired from [dumbster](https://github.com/rjo1970/dumbster) with the following improvements:
+This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with the following improvements:
 - Dynamic port lookup feature
 - Support of MIME messages with attachments
 - Up-to-date dependencies
 - Extended tests
-- JDK8+ support
+- Numerous bugfixes
+
+This API is compatible with the JDK 8 and higher.
 
 ## Installation (maven)
 
@@ -19,7 +21,7 @@ Use the following dependency in your `pom.xml`:
 <dependency>
     <groupId>ch.astorm</groupId>
     <artifactId>smtp4j</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 </dependency>
 ```
 
