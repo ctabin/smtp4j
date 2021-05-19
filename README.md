@@ -199,3 +199,26 @@ try(InputStream is = attachment.openStream()) {
     //...
 }
 ```
+
+#### Large messages
+
+It is possible that some messages are dropped by the server. This is due to multithreading issues (especially
+when working on localhost) and the buffer size of the incoming Socket.
+
+To avoid this kind of issue without compromising performances, the `SmtpServer` uses
+a default buffer of 1 Mo, which should be sufficient for most common type of messages.
+However, this will be an issue if the message sent by `Transport.send(...)` is larger because
+depending on the runtime, it could (and mostly will) be dropped.
+
+In order to allow large messages to be received by the server, the buffer size must
+hence be increased:
+
+```java
+int largeBuffer = 10 * 1024 * 1024; //10 Mo
+try(SmtpServer smtpServer = new SmtpServerBuilder().withBufferSize(largeBuffer).start()) {
+  //...
+}
+```
+
+Note that the buffer size cannot be changed while the server is running.
+

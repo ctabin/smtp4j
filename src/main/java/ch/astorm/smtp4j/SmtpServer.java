@@ -26,6 +26,7 @@ public class SmtpServer implements AutoCloseable {
     private static final Logger LOG = Logger.getLogger(SmtpServer.class.getName());
 
     private int port;
+    private int bufferSize = 1 * 1024 * 1024; //1 Mo
     private final SmtpMessageStorage localStorage;
 
     private volatile SmtpMessageHandler messageHandler;
@@ -75,6 +76,32 @@ public class SmtpServer implements AutoCloseable {
         return messageHandler;
     }
 
+    /**
+     * Defines the socket buffer size (in bytes).
+     * The buffer size impacts the amount of data the underlying Socket used for the communication
+     * can store. A buffer too small regarding the message size can lead to data loss and hence disregarding
+     * incoming messages.
+     * <p>By default, this value is set to 1 Mo and cannot be change while the server
+     * is running.</p>
+     * 
+     * @param size The socket buffer size (must greater than zero).
+     */
+    public void setBufferSize(int size) {
+        if(!isClosed()) { throw new IllegalStateException("Cannot change size while the server is running"); }
+        if(size<=0) { throw new IllegalArgumentException("Invalid size: "+size); }
+        this.bufferSize = size;
+    }
+    
+    /**
+     * Returns the socket buffer size (in bytes).
+     * By default, this value is set to 1 Mo.
+     * 
+     * @return The buffer size.
+     */
+    public int getBufferSize() {
+        return bufferSize;
+    }
+    
     /**
      * Returns all the received messages.
      *
@@ -148,6 +175,8 @@ public class SmtpServer implements AutoCloseable {
             serverSocket = new ServerSocket(port);
         }
 
+        serverSocket.setReceiveBufferSize(bufferSize);
+        
         localThread = new Thread(new SmtpPacketListener());
         localThread.start();
     }
