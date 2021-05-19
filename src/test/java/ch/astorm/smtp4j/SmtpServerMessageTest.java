@@ -4,6 +4,7 @@ package ch.astorm.smtp4j;
 import ch.astorm.smtp4j.core.SmtpAttachment;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -12,8 +13,10 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 import javax.activation.DataHandler;
-import javax.mail.BodyPart;
 import javax.mail.Message.RecipientType;
 import javax.mail.Multipart;
 import javax.mail.Session;
@@ -137,6 +140,103 @@ public class SmtpServerMessageTest {
 
         try { attachment.openStream(); fail("Error expected"); }
         catch(IOException ioe) { /* ok */ }
+
+        smtpServer.clearReceivedMessages();
+        assertTrue(smtpServer.getReceivedMessages().isEmpty());
+    }
+
+    @Test
+    public void testMessageWithMultipleAttachements() throws Exception {
+        Session session = Session.getDefaultInstance(smtpProps);
+        MimeMessage msg = new MimeMessage(session);
+
+        msg.setFrom(new InternetAddress("source@smtp4j.local"));
+        msg.addRecipient(RecipientType.TO, new InternetAddress("targer@smtp4j.local"));
+        msg.setSubject("Message with multiple attachments", StandardCharsets.UTF_8.name());
+
+        MimeBodyPart bodyPart = new MimeBodyPart();
+        bodyPart.setText("There is your content", StandardCharsets.UTF_8.name());
+
+        Multipart mp = new MimeMultipart();
+        mp.addBodyPart(bodyPart);
+
+        String staticStr = "some TXT Content. #/";
+        String dynContent = "";
+        {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try(ZipOutputStream zos = new ZipOutputStream(baos)) {
+                zos.putNextEntry(new ZipEntry("content/"));
+                zos.closeEntry();
+                zos.putNextEntry(new ZipEntry("content/file.txt"));
+                for(int i=0 ; i<5000 ; ++i) {
+                    String toAdd = staticStr;
+                    if(i%100==0 && i>0) { toAdd += "\r\n"; }
+
+                    dynContent += toAdd;
+
+                    byte[] strBytes = toAdd.getBytes(StandardCharsets.UTF_8);
+                    zos.write(strBytes);
+                }
+                zos.closeEntry();
+            }
+
+            MimeBodyPart attachZipPart = new MimeBodyPart();
+            attachZipPart.setDataHandler(new DataHandler(new ByteArrayDataSource(baos.toByteArray(), "application/octet-stream")));
+            attachZipPart.setFileName("file.zip");
+            mp.addBodyPart(attachZipPart);
+        }
+
+        String fileContent = "This is some file content. - Enjoy !";
+        {
+            MimeBodyPart attachTxtPart = new MimeBodyPart();
+            attachTxtPart.setDataHandler(new DataHandler(new ByteArrayDataSource(fileContent.getBytes(StandardCharsets.UTF_8), "text/plain")));
+            attachTxtPart.setFileName("data.txt");
+            mp.addBodyPart(attachTxtPart);
+        }
+
+        msg.setContent(mp);
+
+        Transport.send(msg);
+
+        assertEquals(1, smtpServer.getReceivedMessages().size());
+
+        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        List<SmtpAttachment> attachments = message.getAttachments();
+        assertEquals(2, attachments.size());
+
+        {
+            SmtpAttachment attachment = attachments.get(0);
+            assertEquals("file.zip", attachment.getFilename());
+
+            try(ZipInputStream zis = new ZipInputStream(attachment.openStream())) {
+                assertEquals("content/", zis.getNextEntry().getName());
+                zis.closeEntry();
+
+                ZipEntry fileEntry = zis.getNextEntry();
+                assertEquals("content/file.txt", fileEntry.getName());
+
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024];
+                int read = zis.read(buffer);
+                while(read>=0) {
+                    baos.write(buffer, 0, read);
+                    read = zis.read(buffer);
+                }
+
+                String str = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+                assertEquals(dynContent, str);
+            }
+        }
+
+        {
+            SmtpAttachment attachment = attachments.get(1);
+            assertEquals("data.txt", attachment.getFilename());
+
+            try(BufferedReader reader = new BufferedReader(new InputStreamReader(attachment.openStream()))) {
+                String str = reader.readLine();
+                assertEquals(fileContent, str);
+            }
+        }
 
         smtpServer.clearReceivedMessages();
         assertTrue(smtpServer.getReceivedMessages().isEmpty());
