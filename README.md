@@ -25,7 +25,7 @@ Use the following dependency in your `pom.xml`:
 <dependency>
     <groupId>ch.astorm</groupId>
     <artifactId>smtp4j</artifactId>
-    <version>1.1</version>
+    <version>1.2</version>
 </dependency>
 ```
 
@@ -39,16 +39,16 @@ how it can be used:
 SmtpServerBuilder builder = new SmtpServerBuilder();
 try(SmtpServer server = builder.withPort(1025).start()) {
     
-    /* create and send an SMTP message */
+    /* create and send an SMTP message to smtp4j */
     MimeMessageBuilder messageBuilder = new MimeMessageBuilder(server);
     messageBuilder.from("source@smtp4j.local").
                    to("target1@smtp4j.local", "John Doe <john@smtp4j.local>").
                    cc("target3@smtp4j.local").
                    subject("Hello, world !").
                    body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.");
-    nessageBuilder.send();
+    nessageBuilder.send(); //uses Transport.send(...)
 
-    /* retrieve the sent message from smtp4j */
+    /* retrieve the sent message in smtp4j */
     List<SmtpMessage> messages = server.getReceivedMessages();
     assertEquals(1, messages.size());
     
