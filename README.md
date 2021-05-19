@@ -35,13 +35,8 @@ how it can be used:
 SmtpServerBuilder builder = new SmtpServerBuilder();
 try(SmtpServer server = builder.withPort(1025).start()) {
     
-    /* configure the SMTP client to send messages to localhost:1025 */
-    Properties smtpProps = new Properties();
-    smtpProps.setProperty("mail.smtp.host", "localhost");
-    smtpProps.setProperty("mail.smtp.port", "1025");
-    
     /* create an SMTP message */
-    Session session = Session.getInstance(smtpProps);
+    Session session = server.createSession();
     MimeMessage msg = new MimeMessage(session);
     msg.setFrom(new InternetAddress("noreply@local.host"));
     msg.addRecipient(RecipientType.TO, new InternetAddress("cedric@smtp4j.com"));
@@ -106,6 +101,20 @@ the default SMTP port (25). If the latter fails (most probably), it will look up
 a free port starting from 1024.
 
 Note that generally ports under 1024 can only be used with root privileges.
+
+### Session
+
+The `SmtpServer` provides some utilities that let you create a new `Session`
+for message creation and sending. The latter will be automatically connected
+to the running server (on localhost):
+
+```java
+SmtpServerBuilder builder = new SmtpServerBuilder();
+try(SmtpServer server = builder.start()) {
+    Session session = server.createSession();
+    //use the session to create a MimeMessage
+}
+```
 
 ### Received messages
 

@@ -15,8 +15,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.mail.Session;
 
 /**
  * Simple SMTP server.
@@ -54,6 +56,31 @@ public class SmtpServer implements AutoCloseable {
         this.messageHandler = localStorage;
     }
 
+    /**
+     * Returns the basic {@code Properties} that can be used for {@link Session}.
+     * If the port is dynamic, then the server must have been started before this
+     * method can be called.
+     * 
+     * @return The properties for this server.
+     */
+    public Properties getSessionProperties() {
+        if(port<=0) { throw new IllegalStateException("Dynamic port lookup: server must be started"); }
+        
+        Properties props = new Properties();
+        props.setProperty("mail.smtp.host", "localhost");
+        props.setProperty("mail.smtp.port", ""+port);
+        return props;
+    }
+    
+    /**
+     * Creates a new {@code Session} instance that will send messages to this server.
+     * 
+     * @return A new {@code Session} instance.
+     */
+    public Session createSession() {
+        return Session.getInstance(getSessionProperties());
+    }
+    
     /**
      * Defines the {@code SmtpMessageHandler} that will receive all the incoming messages.
      * By default, all the messages are stored in a local {@link SmtpMessageStorage}.

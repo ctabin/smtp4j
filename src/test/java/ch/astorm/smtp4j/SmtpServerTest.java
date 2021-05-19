@@ -34,10 +34,11 @@ public class SmtpServerTest {
     }
 
     @Test
-    public void testMultipleStart() throws Exception {
+    public void testMultipleStartClose2() throws Exception {
         SmtpServerBuilder builder = new SmtpServerBuilder();
         SmtpServer server = builder.build();
         assertTrue(server.isClosed());
+        server.close();
 
         server.start();
         assertFalse(server.isClosed());
@@ -45,6 +46,7 @@ public class SmtpServerTest {
         server.close();
 
         assertTrue(server.isClosed());
+        server.close();
 
         server.start();
         assertFalse(server.isClosed());
@@ -52,5 +54,20 @@ public class SmtpServerTest {
         server.close();
 
         assertTrue(server.isClosed());
+    }
+    
+    @Test
+    public void testProperties() throws Exception {
+        SmtpServer serverWithStaticPort = new SmtpServer(1025);
+        assertEquals("localhost", serverWithStaticPort.getSessionProperties().getProperty("mail.smtp.host"));
+        assertEquals("1025", serverWithStaticPort.getSessionProperties().getProperty("mail.smtp.port"));
+        
+        SmtpServer serverWithDynamicPort = new SmtpServer(0);
+        assertThrows(IllegalStateException.class, () -> serverWithDynamicPort.getSessionProperties());
+        
+        serverWithDynamicPort.start();
+        assertEquals("localhost", serverWithDynamicPort.getSessionProperties().getProperty("mail.smtp.host"));
+        assertEquals(""+serverWithDynamicPort.getPort(), serverWithDynamicPort.getSessionProperties().getProperty("mail.smtp.port"));
+        serverWithDynamicPort.close();
     }
 }
