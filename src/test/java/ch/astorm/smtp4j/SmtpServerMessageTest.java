@@ -152,7 +152,7 @@ public class SmtpServerMessageTest {
     }
 
     @Test
-    public void testMessageWithAttachement() throws Exception {
+    public void testMessageWithAttachment() throws Exception {
         Session session = smtpServer.createSession();
         MimeMessage msg = new MimeMessage(session);
 
@@ -209,7 +209,7 @@ public class SmtpServerMessageTest {
     }
 
     @Test
-    public void testMessageWithMultipleAttachements() throws Exception {
+    public void testMessageWithMultipleAttachments() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
         messageBuilder.from("source@smtp4j.local").
                 to("target@smtp4j.local").
@@ -241,7 +241,7 @@ public class SmtpServerMessageTest {
         String fileContent;
         {
             StringBuilder builder = new StringBuilder(1024);
-            for(int i=0 ; i<5000 ; ++i) { builder.append("This is some file content. - Enjoy !\r\n"); }
+            builder.append("This is some file content. - Enjoy !\r\n");
             fileContent = builder.toString();
             
             messageBuilder.attachment("data.txt", "text/plain", new ByteArrayInputStream(fileContent.getBytes(StandardCharsets.UTF_8)));
