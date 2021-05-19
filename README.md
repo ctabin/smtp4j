@@ -42,7 +42,8 @@ try(SmtpServer server = builder.withPort(1025).start()) {
     /* create and send an SMTP message */
     MimeMessageBuilder messageBuilder = new MimeMessageBuilder(server);
     messageBuilder.from("source@smtp4j.local").
-                   to("target@smtp4j.local").
+                   to("target1@smtp4j.local", "John Doe <john@smtp4j.local>").
+                   cc("target3@smtp4j.local").
                    subject("Hello, world !").
                    body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.");
     nessageBuilder.send();
@@ -225,22 +226,29 @@ try(SmtpServer server = builder.withPort(1025).start()) {
     
     /* create and send an SMTP message */
     MimeMessageBuilder messageBuilder = new MimeMessageBuilder(server).
-     from("source@smtp4j.local").
-     to("to1@smtp4j.local").
-     to("to2@smtp4j.local").
-     cc("cc1@smtp4j.local").
-     cc("cc2@smtp4j.local").
-     bcc("bcc@smtp4j.local").
-     at("31.12.2020 23:59:59").
-     subject("Hello, world !").
-     body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.").
-     attachment(new File("file.pdf"));
+       from("source@smtp4j.local").
+       
+       //use either multiple arguments
+       to("to1@smtp4j.local", "Igôr <to2@smtp4.local>").
+       
+       //or a comma-separated list
+       to("to3@smtp4j.local, My Friend <to4@smtp4j.local>").
+       
+       //or call the method multiple times
+       cc("cc1@smtp4j.local").
+       cc("cc2@smtp4j.local").
+       
+       bcc("bcc@smtp4j.local").
+       at("31.12.2020 23:59:59").
+       subject("Hello, world !").
+       body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.").
+       attachment(new File("file.pdf"));
 
-    //build the message and send it to smtp4j
-    nessageBuilder.send();
-    
-    //process the received message
-    //...
+      //build the message and send it to smtp4j
+      nessageBuilder.send();
+      
+      //process the received message
+      //...
 }
 ```
 

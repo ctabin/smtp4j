@@ -28,6 +28,7 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.mail.util.ByteArrayDataSource;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -49,6 +50,12 @@ public class SmtpServerMessageTest {
     @AfterAll
     public static void after() throws Exception {
         smtpServer.close();
+    }
+
+    @AfterEach
+    public void afterEach() {
+        smtpServer.clearReceivedMessages();
+        assertTrue(smtpServer.getReceivedMessages().isEmpty());
     }
 
     @Test
@@ -80,9 +87,25 @@ public class SmtpServerMessageTest {
         assertTrue(message.getAttachments().isEmpty());
         assertNotNull(message.getMimeMessage());
         assertNotNull(message.getRawMimeContent());
+    }
 
-        smtpServer.clearReceivedMessages();
-        assertTrue(smtpServer.getReceivedMessages().isEmpty());
+    @Test
+    public void testMultipleAddresses() throws Exception {
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
+        messageBuilder.from("from@local.host").
+                       to("target1to@local.host, Cédric 2 TO <target2@smtp4j.local>", "another-targer@smtp4j.local").
+                       cc("target1cc@local.host, Rôgë 2 CC <target2@smtp4j.local>").
+                       bcc("target1bcc@local.host, Îrfen 2 BCC <target2@smtp4j.local>").
+                       toRecipient(RecipientType.TO, "anotherTo@smtp4j.local").
+                       subject("Subject test").
+                       body("Some simple message");
+        messageBuilder.send();
+
+        assertEquals(1, smtpServer.getReceivedMessages().size());
+
+        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        assertEquals(Arrays.asList("target1to@local.host", "Cédric 2 TO <target2@smtp4j.local>","another-targer@smtp4j.local","anotherTo@smtp4j.local"), message.getRecipients(RecipientType.TO));
+        assertEquals(Arrays.asList("target1cc@local.host", "Rôgë 2 CC <target2@smtp4j.local>"), message.getRecipients(RecipientType.CC));
     }
     
     @Test
@@ -111,9 +134,6 @@ public class SmtpServerMessageTest {
         assertTrue(message.getAttachments().isEmpty());
         assertNotNull(message.getMimeMessage());
         assertNotNull(message.getRawMimeContent());
-
-        smtpServer.clearReceivedMessages();
-        assertTrue(smtpServer.getReceivedMessages().isEmpty());
     }
     
     @Test
@@ -146,9 +166,6 @@ public class SmtpServerMessageTest {
         assertTrue(message.getAttachments().isEmpty());
         assertNotNull(message.getMimeMessage());
         assertNotNull(message.getRawMimeContent());
-        
-        smtpServer.clearReceivedMessages();
-        assertTrue(smtpServer.getReceivedMessages().isEmpty());
     }
 
     @Test
@@ -203,9 +220,6 @@ public class SmtpServerMessageTest {
 
         try { attachment.openStream(); fail("Error expected"); }
         catch(IOException ioe) { /* ok */ }
-
-        smtpServer.clearReceivedMessages();
-        assertTrue(smtpServer.getReceivedMessages().isEmpty());
     }
 
     @Test
@@ -294,9 +308,6 @@ public class SmtpServerMessageTest {
             }
             assertEquals(fileContent, builder.toString());
         }
-
-        smtpServer.clearReceivedMessages();
-        assertTrue(smtpServer.getReceivedMessages().isEmpty());
     }
     
     @Test
@@ -321,9 +332,6 @@ public class SmtpServerMessageTest {
         //since the buffer is too low, we expect here that the data has been dropped
         //and hence the whole message has been discarded
         assertEquals(1, smtpServer.getReceivedMessages().size());
-
-        smtpServer.clearReceivedMessages();
-        assertTrue(smtpServer.getReceivedMessages().isEmpty());
     }
     
     @Test
@@ -367,9 +375,6 @@ public class SmtpServerMessageTest {
 
         try { attachment.openStream(); fail("Error expected"); }
         catch(IOException ioe) { /* ok */ }
-
-        smtpServer.clearReceivedMessages();
-        assertTrue(smtpServer.getReceivedMessages().isEmpty());
     }
     
     @Test
@@ -406,8 +411,5 @@ public class SmtpServerMessageTest {
 
         List<SmtpAttachment> attachments = message.getAttachments();
         assertEquals(0, attachments.size());
-
-        smtpServer.clearReceivedMessages();
-        assertTrue(smtpServer.getReceivedMessages().isEmpty());
     }
 }

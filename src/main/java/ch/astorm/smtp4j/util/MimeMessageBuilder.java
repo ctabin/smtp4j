@@ -5,6 +5,7 @@ import ch.astorm.smtp4j.SmtpServer;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -18,6 +19,7 @@ import javax.mail.Message.RecipientType;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.Transport;
+import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
@@ -103,11 +105,12 @@ public class MimeMessageBuilder {
     /**
      * Adds the {@code address} to the {@code TO} recipients.
      * 
-     * @param address The address.
+     * @param address The address or a comma-separated list of addresses.
      * @return This builder.
      */
-    public MimeMessageBuilder to(String address) throws MessagingException {
-        return to(new InternetAddress(address));
+    public MimeMessageBuilder to(String... address) throws MessagingException {
+        for(InternetAddress addr : parseAddressList(address)) { to(addr); }
+        return this;
     }
     
     /**
@@ -123,11 +126,12 @@ public class MimeMessageBuilder {
     /**
      * Adds the {@code address} to the {@code CC} recipients.
      * 
-     * @param address The address.
+     * @param address The address or a comma-separated list of addresses.
      * @return This builder.
      */
-    public MimeMessageBuilder cc(String address) throws MessagingException {
-        return cc(new InternetAddress(address));
+    public MimeMessageBuilder cc(String... address) throws MessagingException {
+        for(Address addr : parseAddressList(address)) { cc(addr); }
+        return this;
     }
     
     /**
@@ -143,11 +147,12 @@ public class MimeMessageBuilder {
     /**
      * Adds the {@code address} to the {@code BCC} recipients.
      * 
-     * @param address The address.
+     * @param address The address or a comma-separated list of addresses.
      * @return This builder.
      */
-    public MimeMessageBuilder bcc(String address) throws MessagingException {
-        return bcc(new InternetAddress(address));
+    public MimeMessageBuilder bcc(String... address) throws MessagingException {
+        for(Address addr : parseAddressList(address)) { bcc(addr); }
+        return this;
     }
     
     /**
@@ -164,11 +169,12 @@ public class MimeMessageBuilder {
      * Adds the {@code address} to the specified recipient {@code type}.
      * 
      * @param type The recipient type.
-     * @param address The address.
+     * @param address The address or a comma-separated list of addresses.
      * @return This builder.
      */
-    public MimeMessageBuilder toRecipient(RecipientType type, String address) throws MessagingException {
-        return toRecipient(type, new InternetAddress(address));
+    public MimeMessageBuilder toRecipient(RecipientType type, String... address) throws MessagingException {
+        for(Address addr : parseAddressList(address)) { toRecipient(type, addr); }
+        return this;
     }
     
     /**
@@ -322,5 +328,29 @@ public class MimeMessageBuilder {
         if(message==null) {
             throw new IllegalStateException("Message already built");
         }
+    }
+
+    /**
+     * Parses the {@code addressList} and reassign the personal part of each one
+     * with UTF-8 encoding, so accents are not lost during transfer.
+     *
+     * @param addressList The comma-separated address list.
+     * @return The parsed address list.
+     */
+    protected List<InternetAddress> parseAddressList(String... addressList) throws AddressException {
+        List<InternetAddress> addrs = new ArrayList<>();
+        for(String addrLst : addressList) {
+            for(InternetAddress addr : InternetAddress.parse(addrLst)) {
+                String personal = addr.getPersonal();
+                if(personal!=null) {
+                    //this is a hack to handle correctly the personal part of addresses
+                    //when there are accents
+                    try { addr.setPersonal(personal); }
+                    catch(UnsupportedEncodingException uee) { /* ignored */ }
+                }
+                addrs.add(addr);
+            }
+        }
+        return addrs;
     }
 }
