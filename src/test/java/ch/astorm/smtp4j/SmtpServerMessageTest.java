@@ -37,16 +37,11 @@ import org.junit.jupiter.api.Test;
 
 public class SmtpServerMessageTest {
     private static SmtpServer smtpServer;
-    private static Properties smtpProps;
 
     @BeforeAll
     public static void init() throws Exception {
         SmtpServerBuilder builder = new SmtpServerBuilder();
         smtpServer = builder.withPort(1025).withBufferSize(10 * 1024 * 1024).start();
-
-        smtpProps = new Properties();
-        smtpProps.setProperty("mail.smtp.host", "localhost");
-        smtpProps.setProperty("mail.smtp.port", "1025");
     }
 
     @AfterAll
@@ -56,7 +51,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testSimpleMessage() throws Exception {
-        Session session = Session.getInstance(smtpProps);
+        Session session = smtpServer.createSession();
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("from@local.host"));
@@ -90,7 +85,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testMessageWithAttachement() throws Exception {
-        Session session = Session.getInstance(smtpProps);
+        Session session = smtpServer.createSession();
         MimeMessage msg = new MimeMessage(session);
 
         Date sentDate = new SimpleDateFormat("dd.MM.yyyy HH:mm").parse("31.12.2020 23:59");
@@ -147,7 +142,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testMessageWithMultipleAttachements() throws Exception {
-        Session session = Session.getInstance(smtpProps);
+        Session session = smtpServer.createSession();
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("source@smtp4j.local"));
@@ -252,7 +247,7 @@ public class SmtpServerMessageTest {
     
     @Test
     public void testMessageMultipartWithoutBody() throws Exception {
-        Session session = Session.getInstance(smtpProps);
+        Session session = smtpServer.createSession();
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("info@smtp4j.local"));
@@ -298,7 +293,7 @@ public class SmtpServerMessageTest {
     
     @Test
     public void testMessageMultipartWithMultipleBody() throws Exception {
-        Session session = Session.getInstance(smtpProps);
+        Session session = smtpServer.createSession();
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("info@smtp4j.local"));
