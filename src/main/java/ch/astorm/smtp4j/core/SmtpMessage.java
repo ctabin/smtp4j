@@ -74,8 +74,13 @@ public class SmtpMessage {
      * @return The {@code From} header.
      */
     public String getFrom() {
-        try { return MimeUtility.decodeText(mimeMessage.getFrom()[0].toString()); }
-        catch(UnsupportedEncodingException | MessagingException e) { throw new RuntimeException("Unable to retrieve From header", e); }
+        try {
+            Address[] fromAddrs = mimeMessage.getFrom();
+            if(fromAddrs==null || fromAddrs.length==0) { return null; }
+            return MimeUtility.decodeText(mimeMessage.getFrom()[0].toString());
+        } catch(UnsupportedEncodingException | MessagingException e) {
+            throw new RuntimeException("Unable to retrieve From header", e);
+        }
     }
 
     /**
