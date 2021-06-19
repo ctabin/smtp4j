@@ -15,7 +15,7 @@ This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with th
 - Extended tests
 - Numerous bugfixes
 
-This API is compatible with the JDK 8 and higher.
+This API is compatible with the JDK 8, but has to be compiled with JDK 11 or higher.
 
 ## Installation (maven)
 
@@ -25,7 +25,7 @@ Use the following dependency in your `pom.xml`:
 <dependency>
     <groupId>ch.astorm</groupId>
     <artifactId>smtp4j</artifactId>
-    <version>1.2</version>
+    <version>1.2.1</version>
 </dependency>
 ```
 
