@@ -244,11 +244,11 @@ try(SmtpServer server = builder.withPort(1025).start()) {
        body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.").
        attachment(new File("file.pdf"));
 
-      //build the message and send it to smtp4j
-      nessageBuilder.send();
-      
-      //process the received message
-      //...
+    //build the message and send it to smtp4j
+    messageBuilder.send();
+
+    //process the received message
+    //...
 }
 ```
 
