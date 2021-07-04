@@ -46,7 +46,8 @@ try(SmtpServer server = builder.withPort(1025).start()) {
                    cc("target3@smtp4j.local").
                    subject("Hello, world !").
                    body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.");
-    nessageBuilder.send(); //uses Transport.send(...)
+                   
+    messageBuilder.send(); //uses Transport.send(...)
 
     /* retrieve the sent message in smtp4j */
     List<SmtpMessage> messages = server.getReceivedMessages();
