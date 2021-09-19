@@ -15,8 +15,13 @@ This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with th
 - Extended tests
 - Numerous bugfixes
 
-Up to the version 1.2.1, this API is compatible with the JDK 8 and upwards with the `javax` packages.
-Since version 2.0.0, this API is compatiable with the JDK 11 and upwards with the `jakarta` packages.
+
+Here is the compatibility map of this API:
+
+| Version  | JDK                | Package   |
+| -------_ | ------------------ | --------- |
+| <= 1.2.1 | JDK 8 and upwards  | `javax`   |
+| >= 2.0.0 | JDK 11 and upwards | `jakarta` |
 
 ## Installation (maven)
 
