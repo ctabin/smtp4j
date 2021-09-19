@@ -1,9 +1,9 @@
 
 package ch.astorm.smtp4j.core;
 
+import jakarta.mail.MessagingException;
 import java.io.IOException;
 import java.io.InputStream;
-import javax.mail.MessagingException;
 
 /**
  * Attachment of an {@code SmtpMessage}.
