@@ -18,10 +18,11 @@ This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with th
 
 Here is the compatibility map of this API:
 
-| Version  | JDK                | Package   |
-| -------_ | ------------------ | --------- |
-| <= 1.2.1 | JDK 8 and upwards  | `javax`   |
-| >= 2.0.0 | JDK 11 and upwards | `jakarta` |
+| Version  | JDK                | Package
+| -------- | ------------------ | ---------
+| <= 1.2.1 | JDK 8 and upwards  | `javax`
+| >= 2.0.0 | JDK 11 and upwards | `jakarta`
+
 
 ## Installation (maven)
 
