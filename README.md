@@ -20,7 +20,7 @@ Here is the compatibility map of this API:
 
 | Version  | JDK                | Package
 | -------- | ------------------ | ---------
-| <= 1.2.1 | JDK 8 and upwards  | `javax`
+| <= 1.2.2 | JDK 8 and upwards  | `javax`
 | >= 2.0.0 | JDK 11 and upwards | `jakarta`
 
 
@@ -32,7 +32,7 @@ Use the following dependency in your `pom.xml`:
 <dependency>
     <groupId>ch.astorm</groupId>
     <artifactId>smtp4j</artifactId>
-    <version>2.0.0</version>
+    <version>2.0.1</version>
 </dependency>
 ```
 
