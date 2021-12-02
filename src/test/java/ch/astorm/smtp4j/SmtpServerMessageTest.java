@@ -412,4 +412,21 @@ public class SmtpServerMessageTest {
         List<SmtpAttachment> attachments = message.getAttachments();
         assertEquals(0, attachments.size());
     }
+    
+    @Test
+    public void testSpecialMessageDataForDot() throws Exception {
+        String text = "This méssage has multiple lines in SMTP and a dot.dot.dot.dot.dot.dot..dot.";
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
+                from("source@smtp4j.local").
+                to("target@smtp4j.local").
+                subject("Message with multiple attachments").
+                body(text);
+
+        messageBuilder.send();
+
+        assertEquals(1, smtpServer.getReceivedMessages().size());
+        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        String body = message.getBody();
+        assertEquals(text, body);
+    }
 }

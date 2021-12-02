@@ -119,6 +119,8 @@ public class SmtpTransactionHandler {
                         smtpMessageContent.delete(smtpMessageContent.length()-SmtpProtocolConstants.CRLF.length(), smtpMessageContent.length());
                         break;
                     } else {
+                        //if DATA starts with a dot, a second one must be added
+                        if(currentLine.startsWith(SmtpProtocolConstants.DOT)) { currentLine = currentLine.substring(1); }
                         smtpMessageContent.append(currentLine).append(SmtpProtocolConstants.CRLF);
                     }
 
