@@ -38,7 +38,7 @@ Use the following dependency in your `pom.xml`:
 
 ## Quick Start Guide
 
-Here is a quick example of the usage of this API that show an oversight of
+Here is a quick example of the usage of this API that shows an oversight on
 how it can be used:
 
 ```java
@@ -76,7 +76,7 @@ try(SmtpServer server = builder.withPort(1025).start()) {
 Here are some usages about specific parts of the API. For more examples,
 look in the [tests](src/test/java/ch/astorm/smtp4j).
 
-Basically, it is recommanded to always use the [SmtpServerBuilder](src/main/java/ch/astorm/smtp4j/SmtpServerBuilder.java)
+Basically, it is recommended to always use the [SmtpServerBuilder](src/main/java/ch/astorm/smtp4j/SmtpServerBuilder.java)
 class to instanciate a new `SmtpServer` instance.
 
 ### SMTP server port
@@ -134,6 +134,21 @@ List<SmtpMessage> receivedMessages = smtpServer.readReceivedMessages();
 This method will clear the server's storage cache, hence another invocation of
 the same method will yield an empty list until a new message has been received.
 
+#### Waiting for messages
+
+A simple API is provided to wait and loop over the received messages:
+
+```java
+SmtpMessageIterator smtpMessageIt = smtpServer.receivedMessageIterator();
+SmtpMessage smtpMessage = smtpMessageIt.next(); //blocks until the first message is available
+while(smtpMessage!=null) {
+    /* ... */
+    
+    //blocks until the next message is available
+    smtpMessage = smtpMessageIt.next();
+}
+```
+
 #### Message handling
 
 By default, once a `SmtpMessage` has been received, it will be stored in an internal
@@ -149,7 +164,7 @@ It is possible to override this default behavior with your custom handler with t
 following piece of code:
 
 ```java
-SmtpMessageHandler myCustomHandler = smtpMessage -> System.out.println("Message received from: "+smtpMessage.getFrom());
+SmtpMessageHandler myCustomHandler = new CustomSmtpMessageHandler();
 
 SmtpServerBuilder builder = new SmtpServerBuilder();
 try(SmtpServer server = builder.withMessageHandler(myCustomHandler).start()) {
@@ -260,6 +275,25 @@ dedicated `Session` constructor:
 ```java
 MimeMessageBuilder messageBuilder = new MimeMessageBuilder(session);
 ```
+
+#### Server status
+
+It is possible to listen to `SmtpServer` start/close events by implementing a
+[SmtpServerListener](src/main/java/ch/astorm/smtp4j/core/SmtpServerListener.java).
+
+```java
+SmtpServerListener myListener = new SmtpServerListener() {
+    public void notifyStart(SmtpServer server) { System.out.println("Server has been started"); }
+    public void notifyClose(SmtpServer server) { System.out.println("Server has been closed"); }
+}
+
+mySmtpServer.addListener(myListener);
+```
+
+### Limitations
+
+For now, it is not possible to communicate securely (SMTPS or SSL/TLS) through this API. If the client
+tries to initiate a secure channel, the connection will be closed.
 
 ## Donate
 

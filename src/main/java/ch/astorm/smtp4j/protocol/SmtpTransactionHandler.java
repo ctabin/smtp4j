@@ -128,7 +128,7 @@ public class SmtpTransactionHandler {
                 }
 
                 SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString());
-                handler.handle(message);
+                handler.receive(message);
 
                 reply(SmtpProtocolConstants.CODE_OK, "OK");
                 continue;

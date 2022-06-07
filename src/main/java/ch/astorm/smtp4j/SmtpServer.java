@@ -3,7 +3,9 @@ package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
+import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageIterator;
 import ch.astorm.smtp4j.core.SmtpMessageStorage;
+import ch.astorm.smtp4j.core.SmtpServerListener;
 import ch.astorm.smtp4j.protocol.SmtpProtocolException;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
 import jakarta.mail.Session;
@@ -15,6 +17,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -29,6 +32,7 @@ public class SmtpServer implements AutoCloseable {
 
     private int port;
     private final SmtpMessageStorage localStorage;
+    private final List<SmtpServerListener> listeners;
 
     private volatile SmtpMessageHandler messageHandler;
     private volatile ServerSocket serverSocket;
@@ -53,6 +57,7 @@ public class SmtpServer implements AutoCloseable {
         this.port = port;
         this.localStorage = new SmtpMessageStorage();
         this.messageHandler = localStorage;
+        this.listeners = new ArrayList<>(4);
     }
 
     /**
@@ -103,12 +108,23 @@ public class SmtpServer implements AutoCloseable {
     }
     
     /**
+     * Returns a {@link SmtpMessageIterator} that will block until a new {@link SmtpMessage}
+     * is available.
+     *
+     * @return A new {code SmtpMessageIterator} instance.
+     * @see SmtpMessageHandler#iterator()
+     */
+    public SmtpMessageIterator receivedMessageIterator() {
+        return localStorage.iterator();
+    }
+    
+    /**
      * Returns all the (newly) received messages.
      * If no message has been received since the last invocation, an empty list
      * will be returned.
      * 
      * @return A list with the newly received messages or an empty list.
-     * @see SmtpMessageStorage#readMessages()
+     * @see SmtpMessageHandler#readMessages()
      */
     public List<SmtpMessage> readReceivedMessages() {
         return localStorage.readMessages();
@@ -145,6 +161,16 @@ public class SmtpServer implements AutoCloseable {
      */
     public int getPort() {
         return port;
+    }
+
+    /**
+     * Returns true if the {@code SmtpServer} is started and is actually listening for
+     * new messages.
+     *
+     * @return True if the server has been {@link #start() started} and not yet closed.
+     */
+    public boolean isRunning() {
+        return serverSocket!=null;
     }
 
     /**
@@ -189,11 +215,52 @@ public class SmtpServer implements AutoCloseable {
 
         localThread = new Thread(new SmtpPacketListener());
         localThread.start();
+
+        notifyStarted();
     }
 
     private ServerSocket createSocketIfPossible(int port) {
         try { return new ServerSocket(port); }
         catch(IOException e) { return null; }
+    }
+
+    /**
+     * Registers the specified {@code listener} to the server's events.
+     *
+     * @param listener The listener to add.
+     */
+    public void addListener(SmtpServerListener listener) {
+        this.listeners.add(listener);
+    }
+
+    /**
+     * Removes the specified {@code listener} of the server's event notifications.
+     *
+     * @param listener The listener to remove.
+     * @return True if the listener has been removed.
+     */
+    public boolean removeListener(SmtpServerListener listener) {
+        return this.listeners.remove(listener);
+    }
+
+    /**
+     * Returns the listeners of this server.
+     * The returned list is live.
+     *
+     * @return The listeners.
+     */
+    public List<SmtpServerListener> getListeners() {
+        return this.listeners;
+    }
+
+    private void notifyStarted() {
+        localStorage.notifyStart(this);
+        listeners.forEach(l -> l.notifyStart(this));
+    }
+
+    private void notifyClosed() {
+        localStorage.notifyClose(this);
+        listeners.forEach(l -> l.notifyClose(this));
     }
 
     /**
@@ -214,6 +281,8 @@ public class SmtpServer implements AutoCloseable {
         try { localThread.join(); }
         catch(InterruptedException ie) { /* ignored */ }
         localThread = null;
+
+        notifyClosed();
     }
 
     private class SmtpPacketListener implements Runnable {

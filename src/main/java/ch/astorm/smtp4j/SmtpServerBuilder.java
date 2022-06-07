@@ -2,7 +2,10 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
+import ch.astorm.smtp4j.core.SmtpServerListener;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Helper to build a new {@code SmtpServer}.
@@ -10,6 +13,7 @@ import java.io.IOException;
 public class SmtpServerBuilder {
     private int port;
     private SmtpMessageHandler handler;
+    private List<SmtpServerListener> listeners;
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
@@ -37,6 +41,19 @@ public class SmtpServerBuilder {
     }
 
     /**
+     * Adds the specified {@code listener} once de server is build.
+     *
+     * @param listener The listener to add.
+     * @return This builder.
+     * @see SmtpServer#addListener(ch.astorm.smtp4j.core.SmtpServerListener)
+     */
+    public SmtpServerBuilder withListener(SmtpServerListener listener) {
+        if(listeners==null) { listeners = new ArrayList<>(); }
+        listeners.add(listener);
+        return this;
+    }
+
+    /**
      * Builds the {@code SmtpServer}.
      *
      * @return A new {@code SmtpServer} instance.
@@ -44,6 +61,7 @@ public class SmtpServerBuilder {
     public SmtpServer build() {
         SmtpServer server = new SmtpServer(port);
         server.setMessageHandler(handler);
+        if(listeners!=null) { listeners.forEach(l -> server.addListener(l)); }
         return server;
     }
 
