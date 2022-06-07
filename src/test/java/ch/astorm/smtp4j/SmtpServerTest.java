@@ -1,6 +1,7 @@
 
 package ch.astorm.smtp4j;
 
+import ch.astorm.smtp4j.core.SmtpMessageStorage;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -37,10 +38,12 @@ public class SmtpServerTest {
     public void testMultipleStartClose2() throws Exception {
         SmtpServerBuilder builder = new SmtpServerBuilder();
         SmtpServer server = builder.build();
+        assertFalse(server.isRunning());
         assertTrue(server.isClosed());
         server.close();
 
         server.start();
+        assertTrue(server.isRunning());
         assertFalse(server.isClosed());
         int port = server.getPort();
         server.close();
@@ -69,5 +72,17 @@ public class SmtpServerTest {
         assertEquals("localhost", serverWithDynamicPort.getSessionProperties().getProperty("mail.smtp.host"));
         assertEquals(""+serverWithDynamicPort.getPort(), serverWithDynamicPort.getSessionProperties().getProperty("mail.smtp.port"));
         serverWithDynamicPort.close();
+    }
+
+    @Test
+    public void testListeners() throws Exception {
+        SmtpMessageStorage store = new SmtpMessageStorage();
+        SmtpServer server = new SmtpServer(1025);
+        server.addListener(store);
+        server.addListener(store);
+        assertEquals(2, server.getListeners().size());
+        assertTrue(server.removeListener(store));
+        assertTrue(server.removeListener(store));
+        assertFalse(server.removeListener(store));
     }
 }
