@@ -52,12 +52,6 @@ public class SmtpServerMessageTest {
         smtpServer.close();
     }
 
-    @AfterEach
-    public void afterEach() {
-        smtpServer.clearReceivedMessages();
-        assertTrue(smtpServer.getReceivedMessages().isEmpty());
-    }
-
     @Test
     public void testSimpleMessage() throws Exception {
         Session session = smtpServer.createSession();
@@ -73,9 +67,10 @@ public class SmtpServerMessageTest {
 
         Transport.send(msg);
 
-        assertEquals(1, smtpServer.getReceivedMessages().size());
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
 
-        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        SmtpMessage message = received.get(0);
         assertEquals("from@local.host", message.getFrom());
         assertEquals("from@local.host", message.getSourceFrom());
         assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
@@ -101,9 +96,10 @@ public class SmtpServerMessageTest {
                        body("Some simple message");
         messageBuilder.send();
 
-        assertEquals(1, smtpServer.getReceivedMessages().size());
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
 
-        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        SmtpMessage message = received.get(0);
         assertEquals(Arrays.asList("target1to@local.host", "Cédric 2 TO <target2@smtp4j.local>","another-targer@smtp4j.local","anotherTo@smtp4j.local"), message.getRecipients(RecipientType.TO));
         assertEquals(Arrays.asList("target1cc@local.host", "Rôgë 2 CC <target2@smtp4j.local>"), message.getRecipients(RecipientType.CC));
     }
@@ -120,9 +116,10 @@ public class SmtpServerMessageTest {
                        body("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", StandardCharsets.UTF_8);
         messageBuilder.send();
         
-        assertEquals(1, smtpServer.getReceivedMessages().size());
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
 
-        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        SmtpMessage message = received.get(0);
         assertEquals("from@local.host", message.getFrom());
         assertEquals("from@local.host", message.getSourceFrom());
         assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
@@ -151,9 +148,10 @@ public class SmtpServerMessageTest {
         
         assertThrows(IllegalStateException.class, () -> messageBuilder.send());
         
-        assertEquals(1, smtpServer.getReceivedMessages().size());
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
 
-        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        SmtpMessage message = received.get(0);
         assertEquals("from@local.host", message.getFrom());
         assertEquals("from@local.host", message.getSourceFrom());
         assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
@@ -194,10 +192,11 @@ public class SmtpServerMessageTest {
 
         Transport.send(msg);
 
-        assertEquals(1, smtpServer.getReceivedMessages().size());
-
-        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
-
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
+        assertTrue(smtpServer.readReceivedMessages().isEmpty());
+        
+        SmtpMessage message = received.get(0);
         assertEquals("Cédric <info@smtp4j.local>", message.getFrom());
         assertEquals("info@smtp4j.local", message.getSourceFrom());
         assertEquals(Arrays.asList("Méphisto <user_daemon@underground.local>"), message.getRecipients(RecipientType.TO));
@@ -264,9 +263,10 @@ public class SmtpServerMessageTest {
         MimeMessage mimeMessage = messageBuilder.send();
         assertNotNull(mimeMessage);
 
-        assertEquals(1, smtpServer.getReceivedMessages().size());
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
 
-        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        SmtpMessage message = received.get(0);
         List<SmtpAttachment> attachments = message.getAttachments();
         assertEquals(2, attachments.size());
 
@@ -331,7 +331,7 @@ public class SmtpServerMessageTest {
 
         //since the buffer is too low, we expect here that the data has been dropped
         //and hence the whole message has been discarded
-        assertEquals(1, smtpServer.getReceivedMessages().size());
+        assertEquals(1, smtpServer.readReceivedMessages().size());
     }
     
     @Test
@@ -353,9 +353,10 @@ public class SmtpServerMessageTest {
 
         Transport.send(msg);
 
-        assertEquals(1, smtpServer.getReceivedMessages().size());
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
 
-        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        SmtpMessage message = received.get(0);
 
         assertEquals("info@smtp4j.local", message.getFrom());
         assertEquals(Arrays.asList("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
@@ -400,9 +401,10 @@ public class SmtpServerMessageTest {
 
         Transport.send(msg);
 
-        assertEquals(1, smtpServer.getReceivedMessages().size());
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
 
-        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        SmtpMessage message = received.get(0);
 
         assertEquals("info@smtp4j.local", message.getFrom());
         assertEquals(Arrays.asList("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
@@ -424,9 +426,26 @@ public class SmtpServerMessageTest {
 
         messageBuilder.send();
 
-        assertEquals(1, smtpServer.getReceivedMessages().size());
-        SmtpMessage message = smtpServer.getReceivedMessages().get(0);
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
+
+        SmtpMessage message = received.get(0);
         String body = message.getBody();
         assertEquals(text, body);
+    }
+    
+    @Test
+    public void testLegacyCalls() throws Exception {
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
+                from("source@smtp4j.local").
+                to("target@smtp4j.local").
+                subject("Message with multiple attachments").
+                body("Some content");
+
+        messageBuilder.send();
+        
+        assertEquals(1, smtpServer.getReceivedMessages().size());
+        smtpServer.clearReceivedMessages();
+        assertEquals(0, smtpServer.getReceivedMessages().size());
     }
 }

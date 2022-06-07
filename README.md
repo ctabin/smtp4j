@@ -57,7 +57,7 @@ try(SmtpServer server = builder.withPort(1025).start()) {
     messageBuilder.send(); //uses Transport.send(...)
 
     /* retrieve the sent message in smtp4j */
-    List<SmtpMessage> messages = server.getReceivedMessages();
+    List<SmtpMessage> messages = server.readReceivedMessages();
     assertEquals(1, messages.size());
     
     /* analyze the content of the message */
@@ -68,9 +68,6 @@ try(SmtpServer server = builder.withPort(1025).start()) {
     Date sentDate = receivedMessage.getSentDate();
     List<String> recipientsTo = receivedMessage.getRecipients(RecipientType.TO);
     List<SmtpAttachment> attachments = receivedMessage.getAttachments();
-    
-    /* clear the messages for further tests, if necessary */
-    server.clearReceivedMessages();
 }
 ```
 
@@ -131,14 +128,11 @@ try(SmtpServer server = builder.start()) {
 The received messages can be accessed directly through the `SmtpServer`:
 
 ```java
-List<SmtpMessage> receivedMessages = smtpServer.getReceivedMessages();
+List<SmtpMessage> receivedMessages = smtpServer.readReceivedMessages();
 ```
 
-Once the messages have been processed, it is possible to clear them:
-
-```java
-smtpServer.clearReceivedMessages();
-```
+This method will clear the server's storage cache, hence another invocation of
+the same method will yield an empty list until a new message has been received.
 
 #### Message handling
 

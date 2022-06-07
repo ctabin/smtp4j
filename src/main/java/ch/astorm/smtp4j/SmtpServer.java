@@ -103,25 +103,37 @@ public class SmtpServer implements AutoCloseable {
     }
     
     /**
+     * Returns all the (newly) received messages.
+     * If no message has been received since the last invocation, an empty list
+     * will be returned.
+     * 
+     * @return A list with the newly received messages or an empty list.
+     * @see SmtpMessageStorage#readMessages()
+     */
+    public List<SmtpMessage> readReceivedMessages() {
+        return localStorage.readMessages();
+    }
+    
+    /**
      * Returns all the received messages.
      *
      * @return The received messages.
      * @see SmtpMessageStorage#getMessages()
+     * @deprecated Use {@link #readReceivedMessages()} instead.
      */
+    @Deprecated
     public List<SmtpMessage> getReceivedMessages() {
-        synchronized(localStorage) {
-            return localStorage.getMessages();
-        }
+        return localStorage.getMessages();
     }
-
+    
     /**
      * Clears all the received messages.
      * @see SmtpMessageStorage#clear()
+     * @deprecated Use {@link #readReceivedMessages()} instead.
      */
+    @Deprecated
     public void clearReceivedMessages() {
-        synchronized(localStorage) {
-            localStorage.clear();
-        }
+        localStorage.clear();
     }
 
     /**
