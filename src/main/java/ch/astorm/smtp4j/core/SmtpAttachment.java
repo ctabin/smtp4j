@@ -18,6 +18,13 @@ public class SmtpAttachment {
      */
     @FunctionalInterface
     public static interface StreamProvider {
+        
+        /**
+         * Returns a new {@code InputStream}.
+         * The behavior is implementation dependent.
+         * 
+         * @return A {@code InputStream} instance.
+         */
         InputStream openStream() throws IOException, MessagingException;
     }
 

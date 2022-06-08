@@ -2,7 +2,6 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpMessage;
-import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageIterator;
 import ch.astorm.smtp4j.core.SmtpMessageStorage;
 import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import java.util.ArrayList;
@@ -14,6 +13,7 @@ import java.util.concurrent.Future;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import org.junit.jupiter.api.Test;
+import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageReader;
 
 public class SmtpMessageStorageTest {
     private static final int NB_MESSAGES = 250;
@@ -26,11 +26,11 @@ public class SmtpMessageStorageTest {
         try(SmtpServer smtpServer = new SmtpServerBuilder().withPort(1025).start()) {
             Callable<Integer> msgReader = () -> {
                 int counter = 0;
-                SmtpMessageIterator iterator = smtpServer.receivedMessageIterator();
-                SmtpMessage msg = iterator.next();
+                SmtpMessageReader iterator = smtpServer.receivedMessageReader();
+                SmtpMessage msg = iterator.readMessage();
                 while(msg!=null) {
                     ++counter;
-                    msg = iterator.next();
+                    msg = iterator.readMessage();
                 }
                 return counter;
             };
@@ -65,7 +65,7 @@ public class SmtpMessageStorageTest {
     @Test
     public void testNonStartedIterator() throws Exception {
         SmtpMessageStorage store = new SmtpMessageStorage();
-        assertNull(store.iterator().next());
+        assertNull(store.messageReader().readMessage());
     }
 
     @Test
@@ -74,6 +74,6 @@ public class SmtpMessageStorageTest {
         try(SmtpServer smtpServer = new SmtpServerBuilder().withPort(1025).withMessageHandler(store).withListener(store).start()) {
             /* nothing */
         }
-        assertNull(store.iterator().next());
+        assertNull(store.messageReader().readMessage());
     }
 }
