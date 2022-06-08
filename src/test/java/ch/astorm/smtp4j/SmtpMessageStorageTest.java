@@ -55,6 +55,9 @@ public class SmtpMessageStorageTest {
             }
 
             for(Future<Void> future : senders) { future.get(); }
+            
+            //wait for the last sockets to be handled by the receiver
+            Thread.sleep(500);
         }
 
         Integer receivedMessages = receiver.get();
