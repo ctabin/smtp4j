@@ -432,19 +432,4 @@ public class SmtpServerMessageTest {
         String body = message.getBody();
         assertEquals(text, body);
     }
-    
-    @Test
-    public void testLegacyCalls() throws Exception {
-        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
-                from("source@smtp4j.local").
-                to("target@smtp4j.local").
-                subject("Message with multiple attachments").
-                body("Some content");
-
-        messageBuilder.send();
-        
-        assertEquals(1, smtpServer.getReceivedMessages().size());
-        smtpServer.clearReceivedMessages();
-        assertEquals(0, smtpServer.getReceivedMessages().size());
-    }
 }
