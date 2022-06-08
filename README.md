@@ -150,35 +150,7 @@ try(SmtpMessageReader reader = smtpServer.receivedMessageReader()) {
 }
 ```
 
-#### Message handling
-
-By default, once a `SmtpMessage` has been received, it will be stored in an internal
-[SmtpMessageStorage](src/main/java/ch/astorm/smtp4j/core/SmtpMessageStorage.java) instance,
-which can be directly accessed like this:
-
-```java
-SmtpMessageHandler messageHandler = smtpServer.getMessageHandler();
-SmtpMessageStorage messageStorage = (SmtpMessageStorage)messageHandler;
-```
-
-It is possible to override this default behavior with your custom handler with the
-following piece of code:
-
-```java
-SmtpMessageHandler myCustomHandler = new CustomSmtpMessageHandler();
-
-SmtpServerBuilder builder = new SmtpServerBuilder();
-try(SmtpServer server = builder.withMessageHandler(myCustomHandler).start()) {
-    //...
-}
-```
-
-If you want then to reset the default behavior:
-
-```java
-//reset the internal message handler
-smtpServer.setMessageHandler(null);
-```
+When the `SmtpServer` is closed, the reader will yield `null`.
 
 #### SMTP messages
 
@@ -193,8 +165,8 @@ List<String> recipientsTo = smtpMessage.getRecipients(RecipientType.TO);
 List<SmtpAttachment> attachments = smtpMessage.getAttachments();
 ```
 
-It is also possible retrieve some data directly issued from the SMTP exchange
-with the server. Those data might differ (even be missing) from the underlying
+It is also possible to retrieve some data directly issued from the underlying SMTP exchanges
+between the server and the client. Those data might differ (even be missing) from the resulting
 `MimeMessage`:
 
 ```java
@@ -289,6 +261,36 @@ SmtpServerListener myListener = new SmtpServerListener() {
 }
 
 mySmtpServer.addListener(myListener);
+```
+
+#### Advanced message handling
+
+By default, once a `SmtpMessage` has been received, it will be stored in an internal
+[SmtpMessageStorage](src/main/java/ch/astorm/smtp4j/core/SmtpMessageStorage.java) instance,
+which can be directly accessed like this:
+
+```java
+SmtpMessageHandler messageHandler = smtpServer.getMessageHandler();
+SmtpMessageStorage messageStorage = (SmtpMessageStorage)messageHandler;
+```
+
+It is possible to override this default behavior with your custom handler with the
+following piece of code:
+
+```java
+SmtpMessageHandler myCustomHandler = new CustomSmtpMessageHandler();
+
+SmtpServerBuilder builder = new SmtpServerBuilder();
+try(SmtpServer server = builder.withMessageHandler(myCustomHandler).start()) {
+    //...
+}
+```
+
+To reset the default behavior, just pass a `null` value:
+
+```java
+//reset the internal message handler
+smtpServer.setMessageHandler(null);
 ```
 
 ### Limitations
