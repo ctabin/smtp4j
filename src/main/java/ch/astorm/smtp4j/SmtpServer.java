@@ -129,28 +129,6 @@ public class SmtpServer implements AutoCloseable {
     public List<SmtpMessage> readReceivedMessages() {
         return localStorage.readMessages();
     }
-    
-    /**
-     * Returns all the received messages.
-     *
-     * @return The received messages.
-     * @see SmtpMessageStorage#getMessages()
-     * @deprecated Use {@link #readReceivedMessages()} instead.
-     */
-    @Deprecated
-    public List<SmtpMessage> getReceivedMessages() {
-        return localStorage.getMessages();
-    }
-    
-    /**
-     * Clears all the received messages.
-     * @see SmtpMessageStorage#clear()
-     * @deprecated Use {@link #readReceivedMessages()} instead.
-     */
-    @Deprecated
-    public void clearReceivedMessages() {
-        localStorage.clear();
-    }
 
     /**
      * Returns the port on which the {@code SmtpServer} listen to.
