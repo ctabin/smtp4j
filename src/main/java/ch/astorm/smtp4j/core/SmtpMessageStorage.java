@@ -58,6 +58,11 @@ public class SmtpMessageStorage implements SmtpMessageHandler,SmtpServerListener
                 
                 return !localMessages.isEmpty() ? localMessages.remove(0) : null;
             }
+
+            @Override
+            public void close() throws Exception {
+                /* nothing */
+            }
         };
     }
     

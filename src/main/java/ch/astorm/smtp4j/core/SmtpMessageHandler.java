@@ -18,7 +18,7 @@ public interface SmtpMessageHandler {
     /**
      * Represents a simple {@code SmtpMessage} iterator.
      */
-    static interface SmtpMessageReader {
+    static interface SmtpMessageReader extends AutoCloseable {
         
         /**
          * Reads the next available {@code SmtpMessage}.

@@ -26,11 +26,12 @@ public class SmtpMessageStorageTest {
         try(SmtpServer smtpServer = new SmtpServerBuilder().withPort(1025).start()) {
             Callable<Integer> msgReader = () -> {
                 int counter = 0;
-                SmtpMessageReader iterator = smtpServer.receivedMessageReader();
-                SmtpMessage msg = iterator.readMessage();
-                while(msg!=null) {
-                    ++counter;
-                    msg = iterator.readMessage();
+                try(SmtpMessageReader reader = smtpServer.receivedMessageReader()) {
+                    SmtpMessage msg = reader.readMessage();
+                    while(msg!=null) {
+                        ++counter;
+                        msg = reader.readMessage();
+                    }
                 }
                 return counter;
             };
