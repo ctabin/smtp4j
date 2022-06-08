@@ -76,29 +76,4 @@ public class SmtpMessageStorage implements SmtpMessageHandler,SmtpServerListener
             return copyMsgs;
         }
     }
-    
-    /**
-     * Returns a {@code List} with all the received messages.
-     *
-     * @return All the received messages.
-     * @deprecated Use {@link #readMessages()} instead.
-     */
-    @Deprecated
-    public List<SmtpMessage> getMessages() {
-        synchronized (messages) {
-            return new ArrayList<>(messages);
-        }
-    }
-
-    /**
-     * Clears all the messages.
-     * 
-     * @deprecated Use {@link #readMessages()} instead.
-     */
-    @Deprecated
-    public void clear() {
-        synchronized(messages) {
-            messages.clear();
-        }
-    }
 }
