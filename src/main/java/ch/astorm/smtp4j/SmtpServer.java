@@ -3,7 +3,7 @@ package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
-import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageIterator;
+import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageReader;
 import ch.astorm.smtp4j.core.SmtpMessageStorage;
 import ch.astorm.smtp4j.core.SmtpServerListener;
 import ch.astorm.smtp4j.protocol.SmtpProtocolException;
@@ -108,14 +108,13 @@ public class SmtpServer implements AutoCloseable {
     }
     
     /**
-     * Returns a {@link SmtpMessageIterator} that will block until a new {@link SmtpMessage}
-     * is available.
+     * Returns a new {@link SmtpMessageReader} to read incoming messages.
      *
-     * @return A new {code SmtpMessageIterator} instance.
-     * @see SmtpMessageHandler#iterator()
+     * @return A new {code SmtpMessageReader} instance.
+     * @see SmtpMessageHandler#messageReader()
      */
-    public SmtpMessageIterator receivedMessageIterator() {
-        return localStorage.iterator();
+    public SmtpMessageReader receivedMessageReader() {
+        return localStorage.messageReader();
     }
     
     /**

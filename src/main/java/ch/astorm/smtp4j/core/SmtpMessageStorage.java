@@ -36,12 +36,12 @@ public class SmtpMessageStorage implements SmtpMessageHandler,SmtpServerListener
     }
     
     @Override
-    public SmtpMessageIterator iterator() {
-        return new SmtpMessageIterator() {
+    public SmtpMessageReader messageReader() {
+        return new SmtpMessageReader() {
             private List<SmtpMessage> localMessages = Collections.EMPTY_LIST;
             
             @Override
-            public SmtpMessage next() {
+            public SmtpMessage readMessage() {
                 if(!localMessages.isEmpty()) {
                     return localMessages.remove(0);
                 }
