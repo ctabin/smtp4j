@@ -32,7 +32,7 @@ Use the following dependency in your `pom.xml`:
 <dependency>
     <groupId>ch.astorm</groupId>
     <artifactId>smtp4j</artifactId>
-    <version>2.1.0</version>
+    <version>3.0.0</version>
 </dependency>
 ```
 
