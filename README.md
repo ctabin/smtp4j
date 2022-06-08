@@ -139,13 +139,14 @@ the same method will yield an empty list until a new message has been received.
 A simple API is provided to wait and loop over the received messages:
 
 ```java
-SmtpMessageReader reader = smtpServer.receivedMessageIterator();
-SmtpMessage smtpMessage = reader.readMessage(); //blocks until the first message is available
-while(smtpMessage!=null) {
-    /* ... */
-    
-    //blocks until the next message is available
-    smtpMessage = reader.readMessage();
+try(SmtpMessageReader reader = smtpServer.receivedMessageReader()) {
+  SmtpMessage smtpMessage = reader.readMessage(); //blocks until the first message is available
+  while(smtpMessage!=null) {
+      /* ... */
+      
+      //blocks until the next message is available
+      smtpMessage = reader.readMessage();
+  }
 }
 ```
 
