@@ -21,4 +21,14 @@ public interface SmtpServerListener {
      * @param server The stopped {@code SmtpServer}.
      */
     default void notifyClose(SmtpServer server) {}
+
+    /**
+     * Invoked when the {@code server} has received a message.
+     * This method will be invoked within the background {@code Thread} used to receive
+     * the message.
+     *
+     * @param server The {@code SmtpServer} that received the message.
+     * @param smtpMessage The received message.
+     */
+    void notifyMessage(SmtpServer server, SmtpMessage smtpMessage);
 }

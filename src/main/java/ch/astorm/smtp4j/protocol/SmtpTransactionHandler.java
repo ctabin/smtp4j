@@ -2,7 +2,6 @@
 package ch.astorm.smtp4j.protocol;
 
 import ch.astorm.smtp4j.core.SmtpMessage;
-import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,13 +17,27 @@ public class SmtpTransactionHandler {
     private Socket socket;
     private BufferedReader input;
     private PrintWriter output;
-    private SmtpMessageHandler handler;
+    private MessageReceiver messageReceiver;
 
-    private SmtpTransactionHandler(Socket socket, BufferedReader input, PrintWriter output, SmtpMessageHandler handler) {
+    /**
+     * Represents a message receiver within the SMTP transaction.
+     */
+    @FunctionalInterface
+    public static interface MessageReceiver {
+
+        /**
+         * Invoked when a message is received.
+         *
+         * @param message The received message.
+         */
+        void receiveMessage(SmtpMessage message);
+    }
+
+    private SmtpTransactionHandler(Socket socket, BufferedReader input, PrintWriter output, MessageReceiver messageReceiver) {
         this.socket = socket;
         this.input = input;
         this.output = output;
-        this.handler = handler;
+        this.messageReceiver = messageReceiver;
     }
 
     /**
@@ -33,10 +46,10 @@ public class SmtpTransactionHandler {
      * @param socket The socket.
      * @param input The input scanner.
      * @param output The output writer.
-     * @param handler The message handler.
+     * @param messageReceiver The {@code MessageReceiver}.
      */
-    public static void handle(Socket socket, BufferedReader input, PrintWriter output, SmtpMessageHandler handler) throws IOException, SmtpProtocolException {
-        SmtpTransactionHandler sth = new SmtpTransactionHandler(socket, input, output, handler);
+    public static void handle(Socket socket, BufferedReader input, PrintWriter output, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
+        SmtpTransactionHandler sth = new SmtpTransactionHandler(socket, input, output, messageReceiver);
         sth.execute();
     }
 
@@ -128,7 +141,7 @@ public class SmtpTransactionHandler {
                 }
 
                 SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString());
-                handler.receive(message);
+                messageReceiver.receiveMessage(message);
 
                 reply(SmtpProtocolConstants.CODE_OK, "OK");
                 continue;

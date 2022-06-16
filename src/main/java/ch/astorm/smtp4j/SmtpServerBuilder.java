@@ -33,7 +33,7 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
-     * @see SmtpServer#setMessageHandler(ch.astorm.smtp4j.core.SmtpMessageHandler)
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
@@ -59,8 +59,7 @@ public class SmtpServerBuilder {
      * @return A new {@code SmtpServer} instance.
      */
     public SmtpServer build() {
-        SmtpServer server = new SmtpServer(port);
-        server.setMessageHandler(handler);
+        SmtpServer server = new SmtpServer(port, handler);
         if(listeners!=null) { listeners.forEach(l -> server.addListener(l)); }
         return server;
     }
