@@ -134,6 +134,9 @@ List<SmtpMessage> receivedMessages = smtpServer.readReceivedMessages();
 This method will clear the server's storage cache, hence another invocation of
 the same method will yield an empty list until a new message has been received.
 
+**WARNING:** Do not use this method concurrently `SmtpServer.receivedMessageReader()`
+because of race conditions.
+
 #### Waiting for messages
 
 A simple API is provided to wait and loop over the received messages:
@@ -151,6 +154,10 @@ try(SmtpMessageReader reader = smtpServer.receivedMessageReader()) {
 ```
 
 When the `SmtpServer` is closed, the reader will yield `null`.
+
+**WARNING:** Creating multiple instances of `SmtpMessageReader` will cause a race condition between
+them and hence, a message will be received only by one of the readers. For the same reasons, do not use
+`SmtpServer.readReceivedMessages()` when using a reader.
 
 #### SMTP messages
 
@@ -249,15 +256,16 @@ dedicated `Session` constructor:
 MimeMessageBuilder messageBuilder = new MimeMessageBuilder(session);
 ```
 
-#### Server status
+#### Server events
 
-It is possible to listen to `SmtpServer` start/close events by implementing a
+It is possible to listen to `SmtpServer` events by implementing a
 [SmtpServerListener](src/main/java/ch/astorm/smtp4j/core/SmtpServerListener.java).
 
 ```java
 SmtpServerListener myListener = new SmtpServerListener() {
     public void notifyStart(SmtpServer server) { System.out.println("Server has been started"); }
     public void notifyClose(SmtpServer server) { System.out.println("Server has been closed"); }
+    public void notifyMessage(SmtpServer server, SmtpMessage message) { System.out.println("Message has been received"); }
 }
 
 mySmtpServer.addListener(myListener);
@@ -265,13 +273,13 @@ mySmtpServer.addListener(myListener);
 
 #### Advanced message handling
 
-By default, once a `SmtpMessage` has been received, it will be stored in an internal
-[SmtpMessageStorage](src/main/java/ch/astorm/smtp4j/core/SmtpMessageStorage.java) instance,
+By default, once a `SmtpMessage` has been received, it will be stored in a default
+[DefaultSmtpMessageHandler](src/main/java/ch/astorm/smtp4j/core/DefaultSmtpMessageHandler.java) instance,
 which can be directly accessed like this:
 
 ```java
 SmtpMessageHandler messageHandler = smtpServer.getMessageHandler();
-SmtpMessageStorage messageStorage = (SmtpMessageStorage)messageHandler;
+DefaultSmtpMessageHandler defaultMessageHandler = (DefaultSmtpMessageHandler)messageHandler;
 ```
 
 It is possible to override this default behavior with your custom handler with the
@@ -284,13 +292,6 @@ SmtpServerBuilder builder = new SmtpServerBuilder();
 try(SmtpServer server = builder.withMessageHandler(myCustomHandler).start()) {
     //...
 }
-```
-
-To reset the default behavior, just pass a `null` value:
-
-```java
-//reset the internal message handler
-smtpServer.setMessageHandler(null);
 ```
 
 ### Limitations

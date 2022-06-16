@@ -4,7 +4,7 @@ package ch.astorm.smtp4j;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageReader;
-import ch.astorm.smtp4j.core.SmtpMessageStorage;
+import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
 import ch.astorm.smtp4j.protocol.SmtpProtocolException;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
@@ -31,10 +31,9 @@ public class SmtpServer implements AutoCloseable {
     private static final Logger LOG = Logger.getLogger(SmtpServer.class.getName());
 
     private int port;
-    private final SmtpMessageStorage localStorage;
+    private final SmtpMessageHandler messageHandler;
     private final List<SmtpServerListener> listeners;
 
-    private volatile SmtpMessageHandler messageHandler;
     private volatile ServerSocket serverSocket;
     private Thread localThread;
 
@@ -47,16 +46,31 @@ public class SmtpServer implements AutoCloseable {
     public static int DEFAULT_PORT = 25;
 
     /**
-     * Creates a new {@code SmtpServer}.
+     * Creates a new {@code SmtpServer} with a {@link DefaultSmtpMessageHandler} instance to
+     * handle received messages.
      *
      * @param port The port to listen to. A value less or equal to zero indicates that
      *             a free port as to be discovered when the {@link #start() start} method
      *             is called.
      */
     public SmtpServer(int port) {
+        this(port, null);
+    }
+
+    /**
+     * Creates a new {@code SmtpServer}.
+     * The {@code messageHandler} will always be notified first for the {@link SmtpServerListener}
+     * events and is NOT part of the {@link #getListeners() listeners} list.
+     *
+     * @param port The port to listen to. A value less or equal to zero indicates that
+     *             a free port as to be discovered when the {@link #start() start} method
+     *             is called.
+     * @param messageHandler The {@code SmtpMessageHandler} used to receive messages or null to
+     *             use a new {@link DefaultSmtpMessageHandler} instance.
+     */
+    public SmtpServer(int port, SmtpMessageHandler messageHandler) {
         this.port = port;
-        this.localStorage = new SmtpMessageStorage();
-        this.messageHandler = localStorage;
+        this.messageHandler = messageHandler!=null ? messageHandler : new DefaultSmtpMessageHandler();
         this.listeners = new ArrayList<>(4);
     }
 
@@ -84,19 +98,6 @@ public class SmtpServer implements AutoCloseable {
     public Session createSession() {
         return Session.getInstance(getSessionProperties());
     }
-    
-    /**
-     * Defines the {@code SmtpMessageHandler} that will receive all the incoming messages.
-     * By default, all the messages are stored in a local {@link SmtpMessageStorage}.
-     * <p>The {@code handler} will replace the current message handler that will not be
-     * notified of received messages anymore. It is possible to set it to {@code null} to
-     * restore default behavior.</p>
-     *
-     * @param handler The handler or null.
-     */
-    public void setMessageHandler(SmtpMessageHandler handler) {
-        this.messageHandler = handler!=null ? handler : localStorage;
-    }
 
     /**
      * Returns the current {@code SmtpMessageHandler}.
@@ -106,7 +107,7 @@ public class SmtpServer implements AutoCloseable {
     public SmtpMessageHandler getMessageHandler() {
         return messageHandler;
     }
-    
+
     /**
      * Returns a new {@link SmtpMessageReader} to read incoming messages.
      *
@@ -114,19 +115,22 @@ public class SmtpServer implements AutoCloseable {
      * @see SmtpMessageHandler#messageReader()
      */
     public SmtpMessageReader receivedMessageReader() {
-        return localStorage.messageReader();
+        return messageHandler.messageReader();
     }
     
     /**
      * Returns all the (newly) received messages.
      * If no message has been received since the last invocation, an empty list
      * will be returned.
+     * <p>Note that if a {@link #receivedMessageReader() reader} has been created, this
+     * method will compete over the same list, hence the messages returned won't be received
+     * through the reader.</p>
      * 
      * @return A list with the newly received messages or an empty list.
      * @see SmtpMessageHandler#readMessages()
      */
     public List<SmtpMessage> readReceivedMessages() {
-        return localStorage.readMessages();
+        return messageHandler.readMessages();
     }
 
     /**
@@ -231,13 +235,18 @@ public class SmtpServer implements AutoCloseable {
     }
 
     private void notifyStarted() {
-        localStorage.notifyStart(this);
+        messageHandler.notifyStart(this);
         listeners.forEach(l -> l.notifyStart(this));
     }
 
     private void notifyClosed() {
-        localStorage.notifyClose(this);
+        messageHandler.notifyClose(this);
         listeners.forEach(l -> l.notifyClose(this));
+    }
+
+    private void notifyMessage(SmtpMessage message) {
+        messageHandler.notifyMessage(this, message);
+        listeners.forEach(l -> l.notifyMessage(this, message));
     }
 
     /**
@@ -269,7 +278,7 @@ public class SmtpServer implements AutoCloseable {
                 try(Socket socket = serverSocket.accept();
                     BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1));
                     PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1))) {
-                    synchronized(localStorage) { SmtpTransactionHandler.handle(socket, input, output, messageHandler); }
+                    synchronized(messageHandler) { SmtpTransactionHandler.handle(socket, input, output, m -> notifyMessage(m)); }
                 } catch(SmtpProtocolException spe) {
                     LOG.log(Level.WARNING, "Protocol Exception", spe);
                 } catch(IOException ioe) {

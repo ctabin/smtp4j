@@ -1,7 +1,7 @@
 
 package ch.astorm.smtp4j;
 
-import ch.astorm.smtp4j.core.SmtpMessageStorage;
+import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -76,7 +76,7 @@ public class SmtpServerTest {
 
     @Test
     public void testListeners() throws Exception {
-        SmtpMessageStorage store = new SmtpMessageStorage();
+        DefaultSmtpMessageHandler store = new DefaultSmtpMessageHandler();
         SmtpServer server = new SmtpServer(1025);
         server.addListener(store);
         server.addListener(store);

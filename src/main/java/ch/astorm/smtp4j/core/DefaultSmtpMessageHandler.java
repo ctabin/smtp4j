@@ -10,7 +10,7 @@ import java.util.List;
  * Simple {@code SmtpMessageHandler} that stores the received messages in a list.
  * This class is Thread-safe.
  */
-public class SmtpMessageStorage implements SmtpMessageHandler,SmtpServerListener {
+public class DefaultSmtpMessageHandler implements SmtpMessageHandler {
     private final List<SmtpMessage> messages = new ArrayList<>(32);
     private volatile boolean serverStarted;
 
@@ -28,7 +28,7 @@ public class SmtpMessageStorage implements SmtpMessageHandler,SmtpServerListener
     }
 
     @Override
-    public void receive(SmtpMessage smtpMessage) {
+    public void notifyMessage(SmtpServer server, SmtpMessage smtpMessage) {
         synchronized(messages) {
             messages.add(smtpMessage);
             messages.notifyAll();

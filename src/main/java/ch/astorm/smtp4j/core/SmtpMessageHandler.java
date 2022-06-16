@@ -6,15 +6,8 @@ import java.util.List;
 /**
  * Represents a message handler that will process any incoming message.
  */
-public interface SmtpMessageHandler {
+public interface SmtpMessageHandler extends SmtpServerListener {
 
-    /**
-     * Receives the given {@code smtpMessage}.
-     *
-     * @param smtpMessage The message received within the transaction.
-     */
-    void receive(SmtpMessage smtpMessage);
-    
     /**
      * Represents a simple {@code SmtpMessage} iterator.
      */
@@ -32,6 +25,9 @@ public interface SmtpMessageHandler {
     
     /**
      * Returns a new {@code SmtpMessageReader} that loops over the received messages.
+     * Note that if you create multiple {@code SmtpMessageReader} instances, the will
+     * compete over the same message list and the messages will be received only by one
+     * of the readers.
      *
      * @return A new {@code SmtpMessageReader} instance.
      */

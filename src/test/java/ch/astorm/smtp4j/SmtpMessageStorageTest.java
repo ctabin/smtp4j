@@ -2,7 +2,7 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpMessage;
-import ch.astorm.smtp4j.core.SmtpMessageStorage;
+import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,13 +68,13 @@ public class SmtpMessageStorageTest {
 
     @Test
     public void testNonStartedIterator() throws Exception {
-        SmtpMessageStorage store = new SmtpMessageStorage();
+        DefaultSmtpMessageHandler store = new DefaultSmtpMessageHandler();
         assertNull(store.messageReader().readMessage());
     }
 
     @Test
     public void testClosedIterator() throws Exception {
-        SmtpMessageStorage store = new SmtpMessageStorage();
+        DefaultSmtpMessageHandler store = new DefaultSmtpMessageHandler();
         try(SmtpServer smtpServer = new SmtpServerBuilder().withPort(1025).withMessageHandler(store).withListener(store).start()) {
             /* nothing */
         }
