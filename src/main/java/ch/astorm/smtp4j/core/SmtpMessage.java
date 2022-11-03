@@ -7,6 +7,7 @@ import jakarta.mail.Address;
 import jakarta.mail.BodyPart;
 import jakarta.mail.Message.RecipientType;
 import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
 import jakarta.mail.internet.MimeUtility;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * Represents an SMTP message.
@@ -29,6 +31,13 @@ public class SmtpMessage {
     private MimeMessage mimeMessage;
     private String rawMimeContent;
 
+    /**
+     * Simple {@code Session} used to create the {@code SmtpMessage} instances because depending on the underlying
+     * library used (for instance Payara 6.2022.1), an NPE can be thrown while reading the content if there is no
+     * session set.
+     */
+    private static final Session SESSION = Session.getInstance(new Properties());
+    
     /**
      * Creates a new {@code SmtpMessage} with the specified parameters.
      *
@@ -224,7 +233,7 @@ public class SmtpMessage {
      */
     public static SmtpMessage create(String from, List<String> recipients, String mimeMessageStr) {
         MimeMessage mimeMessage;
-        try(InputStream is = new ByteArrayInputStream(mimeMessageStr.getBytes(StandardCharsets.UTF_8))) { mimeMessage = new MimeMessage(null, is); }
+        try(InputStream is = new ByteArrayInputStream(mimeMessageStr.getBytes(StandardCharsets.UTF_8))) { mimeMessage = new MimeMessage(SESSION, is); }
         catch(IOException | MessagingException e) { throw new RuntimeException("Unable to create MimeMessage from content", e); }
         return new SmtpMessage(from, recipients, mimeMessage, mimeMessageStr);
     }
