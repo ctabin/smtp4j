@@ -33,7 +33,7 @@ import java.util.List;
 public class MimeMessageBuilder {
     private MimeMessage message;
     private MimeBodyPart body;
-    private List<MimeBodyPart> attachments = new ArrayList<>();
+    private final List<MimeBodyPart> attachments = new ArrayList<>();
     
     /**
      * Creates a new {@code MimeMessageBuilder} by creating a new {@code Session}

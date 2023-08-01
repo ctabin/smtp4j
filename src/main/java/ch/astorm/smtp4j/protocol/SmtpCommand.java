@@ -3,13 +3,14 @@ package ch.astorm.smtp4j.protocol;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * List of SMTP commands.
  */
 public class SmtpCommand {
-    private Type type;
-    private String parameter;
+    private final Type type;
+    private final String parameter;
 
     /**
      * Represents the SMTP command types.
@@ -27,9 +28,9 @@ public class SmtpCommand {
         RESET("RSET"),
         UNKNOWN("#UNKN#");
 
-        private List<String> cmds;
+        private final List<String> cmds;
         private Type(String... cmds) { this.cmds = Arrays.asList(cmds); }
-        public boolean matches(String cmd) { return this.cmds.contains(cmd.toUpperCase()); }
+        public boolean matches(String cmd) { return this.cmds.contains(cmd.toUpperCase(Locale.ROOT)); }
     }
 
     /**

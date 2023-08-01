@@ -6,7 +6,6 @@ import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,10 +13,9 @@ import java.util.List;
  * Handles the SMTP protocol.
  */
 public class SmtpTransactionHandler {
-    private Socket socket;
-    private BufferedReader input;
-    private PrintWriter output;
-    private MessageReceiver messageReceiver;
+    private final BufferedReader input;
+    private final PrintWriter output;
+    private final MessageReceiver messageReceiver;
 
     /**
      * Represents a message receiver within the SMTP transaction.
@@ -33,8 +31,7 @@ public class SmtpTransactionHandler {
         void receiveMessage(SmtpMessage message);
     }
 
-    private SmtpTransactionHandler(Socket socket, BufferedReader input, PrintWriter output, MessageReceiver messageReceiver) {
-        this.socket = socket;
+    private SmtpTransactionHandler(BufferedReader input, PrintWriter output, MessageReceiver messageReceiver) {
         this.input = input;
         this.output = output;
         this.messageReceiver = messageReceiver;
@@ -43,13 +40,12 @@ public class SmtpTransactionHandler {
     /**
      * Handles the SMTP protocol communication.
      *
-     * @param socket The socket.
      * @param input The input scanner.
      * @param output The output writer.
      * @param messageReceiver The {@code MessageReceiver}.
      */
-    public static void handle(Socket socket, BufferedReader input, PrintWriter output, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
-        SmtpTransactionHandler sth = new SmtpTransactionHandler(socket, input, output, messageReceiver);
+    public static void handle(BufferedReader input, PrintWriter output, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
+        SmtpTransactionHandler sth = new SmtpTransactionHandler(input, output, messageReceiver);
         sth.execute();
     }
 
@@ -152,7 +148,6 @@ public class SmtpTransactionHandler {
                 return;
             } else {
                 reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
-                continue;
             }
         }
     }
