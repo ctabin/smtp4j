@@ -20,6 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,7 +36,8 @@ public class SmtpServer implements AutoCloseable {
     private int port;
     private final SmtpMessageHandler messageHandler;
     private final List<SmtpServerListener> listeners;
-
+    private final ThreadFactory threadFactory;
+    
     private volatile ServerSocket serverSocket;
     private Thread localThread;
 
@@ -55,7 +58,7 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      */
     public SmtpServer(int port) {
-        this(port, null);
+        this(port, null, null);
     }
 
     /**
@@ -68,10 +71,12 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      * @param messageHandler The {@code SmtpMessageHandler} used to receive messages or null to
      *             use a new {@link DefaultSmtpMessageHandler} instance.
+     * @param threadFactory The {@link ThreadFactory} to use.
      */
-    public SmtpServer(int port, SmtpMessageHandler messageHandler) {
+    public SmtpServer(int port, SmtpMessageHandler messageHandler, ThreadFactory threadFactory) {
         this.port = port;
         this.messageHandler = messageHandler!=null ? messageHandler : new DefaultSmtpMessageHandler();
+        this.threadFactory = threadFactory!=null ? threadFactory : Executors.defaultThreadFactory();
         this.listeners = new ArrayList<>(4);
     }
 
@@ -214,7 +219,7 @@ public class SmtpServer implements AutoCloseable {
             serverSocket = new ServerSocket(port);
         }
 
-        localThread = new Thread(new SmtpPacketListener());
+        localThread = threadFactory.newThread(new SmtpPacketListener());
         localThread.start();
 
         notifyStarted();

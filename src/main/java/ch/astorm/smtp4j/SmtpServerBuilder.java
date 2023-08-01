@@ -6,6 +6,7 @@ import ch.astorm.smtp4j.core.SmtpServerListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * Helper to build a new {@code SmtpServer}.
@@ -14,6 +15,7 @@ public class SmtpServerBuilder {
     private int port;
     private SmtpMessageHandler handler;
     private List<SmtpServerListener> listeners;
+    private ThreadFactory threadFactory;
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
@@ -33,10 +35,21 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler)
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.concurrent.ThreadFactory)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
+        return this;
+    }
+    
+    /**
+     * Defines the {@link ThreadFactory} to use to handle the SMTP messages.
+     *
+     * @param threadFactory The thread factory.
+     * @return This builder.
+     */
+    public SmtpServerBuilder withThreadFactory(ThreadFactory threadFactory) {
+        this.threadFactory = threadFactory;
         return this;
     }
 
@@ -59,7 +72,7 @@ public class SmtpServerBuilder {
      * @return A new {@code SmtpServer} instance.
      */
     public SmtpServer build() {
-        SmtpServer server = new SmtpServer(port, handler);
+        SmtpServer server = new SmtpServer(port, handler, threadFactory);
         if(listeners!=null) { listeners.forEach(l -> server.addListener(l)); }
         return server;
     }
