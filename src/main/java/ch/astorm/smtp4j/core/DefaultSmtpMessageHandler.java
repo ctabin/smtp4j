@@ -5,6 +5,7 @@ import ch.astorm.smtp4j.SmtpServer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Simple {@code SmtpMessageHandler} that stores the received messages in a list.
@@ -47,12 +48,9 @@ public class DefaultSmtpMessageHandler implements SmtpMessageHandler {
                 }
                 
                 synchronized(messages) {
-                    localMessages = readMessages();
+                    localMessages = readMessages(1, TimeUnit.SECONDS);
                     while(serverStarted && localMessages.isEmpty()) {
-                        try { messages.wait(); }
-                        catch(InterruptedException ie) {}
-                        
-                        localMessages = readMessages();
+                        localMessages = readMessages(1, TimeUnit.SECONDS);
                     }
                 }
                 
@@ -67,10 +65,19 @@ public class DefaultSmtpMessageHandler implements SmtpMessageHandler {
     }
     
     @Override
-    public List<SmtpMessage> readMessages() {
+    public List<SmtpMessage> readMessages(long delayIfNoMessage, TimeUnit unit) {
         if(!serverStarted) { return Collections.EMPTY_LIST; }
         
         synchronized(messages) {
+            if(messages.isEmpty() && delayIfNoMessage>=0) {
+                try { messages.wait(TimeUnit.MILLISECONDS.convert(delayIfNoMessage, unit)); }
+                catch(InterruptedException ie) { }
+            }
+            
+            if(messages.isEmpty()) {
+                return Collections.EMPTY_LIST;
+            }
+            
             List<SmtpMessage> copyMsgs = new ArrayList<>(messages);
             messages.clear();
             return copyMsgs;

@@ -2,6 +2,9 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
+import ch.astorm.smtp4j.core.SmtpMessage;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -84,5 +87,14 @@ public class SmtpServerTest {
         assertTrue(server.removeListener(store));
         assertTrue(server.removeListener(store));
         assertFalse(server.removeListener(store));
+    }
+    
+    @Test
+    public void testNoWaitDelay() throws Exception {
+        SmtpServerBuilder builder = new SmtpServerBuilder();
+        try(SmtpServer server = builder.start()) {
+            List<SmtpMessage> messages = server.readReceivedMessages(-1, TimeUnit.MILLISECONDS);
+            assertTrue(messages.isEmpty());
+        }
     }
 }
