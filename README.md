@@ -51,7 +51,8 @@ try(SmtpServer server = builder.withPort(1025).start()) {
                    to("target1@smtp4j.local", "John Doe <john@smtp4j.local>").
                    cc("target3@smtp4j.local").
                    subject("Hello, world !").
-                   body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.");
+                   body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.").
+                   attachment("data.txt", new File("someAttachment.txt"));
                    
     messageBuilder.send(); //uses Transport.send(...)
 
