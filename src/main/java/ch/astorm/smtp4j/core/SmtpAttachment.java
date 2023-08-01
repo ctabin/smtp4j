@@ -9,8 +9,8 @@ import java.io.InputStream;
  * Attachment of an {@code SmtpMessage}.
  */
 public class SmtpAttachment {
-    private String filename;
-    private String contentType;
+    private final String filename;
+    private final String contentType;
     private StreamProvider streamProvider;
 
     /**
