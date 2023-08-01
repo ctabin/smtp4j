@@ -3,6 +3,7 @@ package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpAttachment;
 import ch.astorm.smtp4j.core.SmtpMessage;
+import ch.astorm.smtp4j.protocol.SmtpExchange;
 import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import jakarta.activation.DataHandler;
 import jakarta.mail.Message.RecipientType;
@@ -29,6 +30,7 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.AfterAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -81,6 +83,11 @@ public class SmtpServerMessageTest {
         assertTrue(message.getAttachments().isEmpty());
         assertNotNull(message.getMimeMessage());
         assertNotNull(message.getRawMimeContent());
+        
+        for(SmtpExchange e : message.getSmtpExchanges()) {
+            assertNotNull(e.getReceivedData());
+            assertNotNull(e.getRepliedData());
+        }
     }
 
     @Test

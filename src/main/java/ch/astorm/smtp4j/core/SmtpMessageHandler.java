@@ -2,6 +2,7 @@
 package ch.astorm.smtp4j.core;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Represents a message handler that will process any incoming message.
@@ -33,12 +34,15 @@ public interface SmtpMessageHandler extends SmtpServerListener {
      */
     SmtpMessageReader messageReader();
     
+    
     /**
      * Retrieves the received messages and clears the list.
-     * If no new message has been received since the last notification, an empty
-     * list will be returned.
+     * In case there are already some messages returned, this method returns them
+     * immediately without waiting.
      * 
+     * @param delayIfNoMessage The delay to wait when there is no message yet received or a negative value to avoid any wait.
+     * @param unit The unit of the {@code delayIfNoMessage}.
      * @return All the (newly) received messages or an empty list if none.
      */
-    List<SmtpMessage> readMessages();
+    List<SmtpMessage> readMessages(long delayIfNoMessage, TimeUnit unit);
 }

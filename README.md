@@ -137,19 +137,26 @@ the same method will yield an empty list until a new message has been received.
 **WARNING:** Do not use this method concurrently `SmtpServer.receivedMessageReader()`
 because of race conditions.
 
+Since smtp4j is multithreaded, it may happen that there is not enough time to process the message before
+reading it. This can be easily circumvented by defining a delay to wait when there is no message yet received.
+
+```
+List<SmtpMessage> receivedMessages = smtpServer.readReceivedMessages(2, TimeUnit.SECONDS);
+```
+
 #### Waiting for messages
 
 A simple API is provided to wait and loop over the received messages:
 
 ```java
 try(SmtpMessageReader reader = smtpServer.receivedMessageReader()) {
-  SmtpMessage smtpMessage = reader.readMessage(); //blocks until the first message is available
-  while(smtpMessage!=null) {
-      /* ... */
+    SmtpMessage smtpMessage = reader.readMessage(); //blocks until the first message is available
+    while(smtpMessage!=null) {
+        /* ... */
       
-      //blocks until the next message is available
-      smtpMessage = reader.readMessage();
-  }
+        //blocks until the next message is available
+        smtpMessage = reader.readMessage();
+    }
 }
 ```
 
@@ -190,6 +197,16 @@ data with the following methods:
 ```java
 MimeMessage mimeMessage = smtpMessage.getMimeMessage();
 String mimeMessageStr = smtpMessage.getRawMimeContent();
+```
+
+#### Low level SMTP exchanges
+
+One can access direclty the exchanges between the sender and smtp4j.
+
+```java
+List<SmtpExchange> exchanges = smtpMessage.getSmtpExchanges();
+List<String> receivedData = exchanges.get(0).getReceivedData();
+String repliedData = exchanges.get(0).getRepliedData();
 ```
 
 #### Attachments

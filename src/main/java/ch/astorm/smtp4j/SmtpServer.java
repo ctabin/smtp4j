@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -125,12 +126,31 @@ public class SmtpServer implements AutoCloseable {
      * <p>Note that if a {@link #receivedMessageReader() reader} has been created, this
      * method will compete over the same list, hence the messages returned won't be received
      * through the reader.</p>
+     * <p>In case there is no message, this method will wait 200 milliseconds before
+     * returning to let a chance for any new message to arrive.</p>
      * 
      * @return A list with the newly received messages or an empty list.
-     * @see SmtpMessageHandler#readMessages()
+     * @see SmtpMessageHandler#readMessages(long, java.util.concurrent.TimeUnit)
      */
     public List<SmtpMessage> readReceivedMessages() {
-        return messageHandler.readMessages();
+        return readReceivedMessages(200, TimeUnit.MILLISECONDS);
+    }
+    
+    /**
+     * Returns all the (newly) received messages.
+     * If no message has been received since the last invocation, an empty list
+     * will be returned.
+     * <p>Note that if a {@link #receivedMessageReader() reader} has been created, this
+     * method will compete over the same list, hence the messages returned won't be received
+     * through the reader.</p>
+     * 
+     * @param delayIfNoMessage Delay to wait if there is no message or a negative value to return immediately.
+     * @param unit The time unit of {@code delayIfNoMessage}.
+     * @return A list with the newly received messages or an empty list.
+     * @see SmtpMessageHandler#readMessages(long, java.util.concurrent.TimeUnit)
+     */
+    public List<SmtpMessage> readReceivedMessages(long delayIfNoMessage, TimeUnit unit) {
+        return messageHandler.readMessages(delayIfNoMessage, unit);
     }
 
     /**

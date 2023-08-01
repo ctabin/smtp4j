@@ -1,7 +1,9 @@
 
 package ch.astorm.smtp4j.core;
 
+import ch.astorm.smtp4j.protocol.SmtpCommand;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
+import ch.astorm.smtp4j.protocol.SmtpExchange;
 import ch.astorm.smtp4j.protocol.SmtpProtocolConstants;
 import jakarta.mail.Address;
 import jakarta.mail.BodyPart;
@@ -30,6 +32,7 @@ public class SmtpMessage {
     private final List<String> sourceRecipients;
     private final MimeMessage mimeMessage;
     private final String rawMimeContent;
+    private final List<SmtpExchange> exchanges;
 
     /**
      * Simple {@code Session} used to create the {@code SmtpMessage} instances because depending on the underlying
@@ -45,12 +48,14 @@ public class SmtpMessage {
      * @param recipients The source {@code Rcpt} parameter values.
      * @param mimeMessage The parsed {@code MimeMessage}.
      * @param rawMimeContent The raw MIME content of {@code mimeMessage}.
+     * @param exchanges The raw SMTP exchanges.
      */
-    public SmtpMessage(String from, List<String> recipients, MimeMessage mimeMessage, String rawMimeContent) {
+    public SmtpMessage(String from, List<String> recipients, MimeMessage mimeMessage, String rawMimeContent, List<SmtpExchange> exchanges) {
         this.sourceFrom = from;
         this.sourceRecipients = recipients;
         this.mimeMessage = mimeMessage;
         this.rawMimeContent = rawMimeContent;
+        this.exchanges = exchanges;
     }
 
     /**
@@ -74,6 +79,15 @@ public class SmtpMessage {
      */
     public List<String> getSourceRecipients() {
         return sourceRecipients;
+    }
+    
+    /**
+     * Returns the raw SMTP exchanges to create this message.
+     *
+     * @return The raw SMTP exchanges.
+     */
+    public List<SmtpExchange> getSmtpExchanges() {
+        return exchanges;
     }
     
     /**
@@ -229,12 +243,13 @@ public class SmtpMessage {
      * @param from The source {@code From} parameter value.
      * @param recipients The source {@code Rcpt} parameter values.
      * @param mimeMessageStr The {@code MimeMessage} content.
+     * @param exchanges The raw SMTP exchanges of this message.
      * @return A new {@code SmtpMessage} instance.
      */
-    public static SmtpMessage create(String from, List<String> recipients, String mimeMessageStr) {
+    public static SmtpMessage create(String from, List<String> recipients, String mimeMessageStr, List<SmtpExchange> exchanges) {
         MimeMessage mimeMessage;
         try(InputStream is = new ByteArrayInputStream(mimeMessageStr.getBytes(StandardCharsets.UTF_8))) { mimeMessage = new MimeMessage(SESSION, is); }
         catch(IOException | MessagingException e) { throw new RuntimeException("Unable to create MimeMessage from content", e); }
-        return new SmtpMessage(from, recipients, mimeMessage, mimeMessageStr);
+        return new SmtpMessage(from, recipients, mimeMessage, mimeMessageStr, exchanges);
     }
 }

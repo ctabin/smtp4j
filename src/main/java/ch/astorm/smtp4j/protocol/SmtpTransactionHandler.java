@@ -75,6 +75,9 @@ public class SmtpTransactionHandler {
     private String mailFrom;
     private List<String> recipients;
     private StringBuilder smtpMessageContent;
+    
+    private final List<String> readData = new ArrayList<>(64);
+    private final List<SmtpExchange> exchanges = new ArrayList<>(32);
 
     private void readTransaction() throws SmtpProtocolException {
         while(true) {
@@ -88,7 +91,7 @@ public class SmtpTransactionHandler {
                     reply(SmtpProtocolConstants.CODE_OK, "OK");
                 } else if(commandType==Type.QUIT) {
                     reply(SmtpProtocolConstants.CODE_OK, "OK");
-                    return;
+                    break;
                 } else {
                     reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
                 }
@@ -136,19 +139,21 @@ public class SmtpTransactionHandler {
                     currentLine = nextLine();
                 }
 
-                SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString());
-                messageReceiver.receiveMessage(message);
-
                 reply(SmtpProtocolConstants.CODE_OK, "OK");
                 continue;
             }
 
             if(commandType==Type.QUIT) {
                 reply(SmtpProtocolConstants.CODE_OK, "OK");
-                return;
+                break;
             } else {
                 reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
             }
+        }
+
+        if(smtpMessageContent!=null) {
+            SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString(), new ArrayList<>(exchanges));
+            messageReceiver.receiveMessage(message);
         }
     }
 
@@ -162,6 +167,7 @@ public class SmtpTransactionHandler {
         try {
             String line = input.readLine();
             if(line==null) { throw new SmtpProtocolException("Unexpected end of stream (no more line)"); }
+            readData.add(line);
             return line;
         } catch(IOException ioe) {
             throw new SmtpProtocolException("I/O exception", ioe);
@@ -195,6 +201,10 @@ public class SmtpTransactionHandler {
         }
         builder.append(SmtpProtocolConstants.CRLF);
 
+        SmtpExchange exchange = new SmtpExchange(new ArrayList<>(readData), builder.toString());
+        exchanges.add(exchange);
+        readData.clear();
+        
         output.print(builder.toString());
         output.flush();
     }
