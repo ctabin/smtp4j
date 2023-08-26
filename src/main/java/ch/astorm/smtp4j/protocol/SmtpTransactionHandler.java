@@ -122,7 +122,7 @@ public class SmtpTransactionHandler {
                 }
 
                 smtpMessageContent = new StringBuilder(256);
-                reply(SmtpProtocolConstants.CODE_INTERMEDIATE_REPLY, null);
+                reply(SmtpProtocolConstants.CODE_INTERMEDIATE_REPLY, "End data with <CR><LF>.<CR><LF>");
 
                 String currentLine = nextLine();
                 while(currentLine!=null) {
