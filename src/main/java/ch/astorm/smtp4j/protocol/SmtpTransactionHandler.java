@@ -129,6 +129,9 @@ public class SmtpTransactionHandler {
                     //DATA content must end with a dot on a single line
                     if(currentLine.equals(SmtpProtocolConstants.DOT)) {
                         smtpMessageContent.delete(smtpMessageContent.length()-SmtpProtocolConstants.CRLF.length(), smtpMessageContent.length());
+                        SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString(), new ArrayList<>(exchanges));
+                        messageReceiver.receiveMessage(message);
+                        resetState();
                         break;
                     } else {
                         //if DATA starts with a dot, a second one must be added
@@ -149,11 +152,6 @@ public class SmtpTransactionHandler {
             } else {
                 reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
             }
-        }
-
-        if(smtpMessageContent!=null) {
-            SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString(), new ArrayList<>(exchanges));
-            messageReceiver.receiveMessage(message);
         }
     }
 
