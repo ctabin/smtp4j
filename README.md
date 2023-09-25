@@ -290,7 +290,27 @@ SmtpServerListener myListener = new SmtpServerListener() {
 mySmtpServer.addListener(myListener);
 ```
 
-#### Advanced message handling
+#### Refuse a message
+
+It is possible to trigger message refusal through the API. The exception message will
+be received on the SMTP client side.
+
+```java
+SmtpServerBuilder builder = new SmtpServerBuilder();
+try(SmtpServer server = builder.start()) {
+    server.addListener((srv, msg) -> {
+        throw new IllegalStateException("Message refused");
+    });
+    
+    new MimeMessageBuilder(server).
+        to("test@astorm.ch").
+        subject("Test").
+        body("Hello!").
+        send()); //a MessagingException will be thrown here !
+}
+```
+
+#### Message storage
 
 By default, once a `SmtpMessage` has been received, it will be stored in a default
 [DefaultSmtpMessageHandler](src/main/java/ch/astorm/smtp4j/core/DefaultSmtpMessageHandler.java) instance,

@@ -61,6 +61,16 @@ public class SmtpCommand {
     public String getParameter() {
         return parameter;
     }
+    
+    /**
+     * Returns this SMTP command in a printable format.
+     *
+     * @return The string representation of this command.
+     */
+    @Override
+    public String toString() {
+        return type+(parameter!=null ? " "+parameter : "");
+    }
 
     /**
      * Parses the {@code line} and creates a new {@code SmtpCommand}.

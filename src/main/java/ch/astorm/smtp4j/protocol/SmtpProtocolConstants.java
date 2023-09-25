@@ -59,4 +59,9 @@ public class SmtpProtocolConstants {
      * Error code when a bad sequence of command has been received.
      */
     public static final int CODE_BAD_COMMAND_SEQUENCE = 503;
+    
+    /**
+     * Error code when a transaction has failed.
+     */
+    public static final int CODE_TRANSACTION_FAILED = 554;
 }

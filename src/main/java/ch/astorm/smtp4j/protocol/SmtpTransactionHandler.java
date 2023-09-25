@@ -25,6 +25,8 @@ public class SmtpTransactionHandler {
 
         /**
          * Invoked when a message is received.
+         * If this method throws an exception, the error will be sent back to the client
+         * and the SMTP transaction will abort.
          *
          * @param message The received message.
          */
@@ -124,14 +126,21 @@ public class SmtpTransactionHandler {
                 smtpMessageContent = new StringBuilder(256);
                 reply(SmtpProtocolConstants.CODE_INTERMEDIATE_REPLY, "Start mail input; end with <CRLF>.<CRLF>");
 
+                boolean hasFailure = false;
                 String currentLine = nextLine();
                 while(currentLine!=null) {
                     //DATA content must end with a dot on a single line
                     if(currentLine.equals(SmtpProtocolConstants.DOT)) {
                         smtpMessageContent.delete(smtpMessageContent.length()-SmtpProtocolConstants.CRLF.length(), smtpMessageContent.length());
                         SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString(), new ArrayList<>(exchanges));
-                        messageReceiver.receiveMessage(message);
-                        resetState();
+                        try {
+                            messageReceiver.receiveMessage(message);
+                            resetState();
+                        } catch(Exception e) {
+                            reply(SmtpProtocolConstants.CODE_TRANSACTION_FAILED, e.getMessage());
+                            hasFailure = true;
+                        }
+                        
                         break;
                     } else {
                         //if DATA starts with a dot, a second one must be added
@@ -142,7 +151,7 @@ public class SmtpTransactionHandler {
                     currentLine = nextLine();
                 }
 
-                reply(SmtpProtocolConstants.CODE_OK, "OK");
+                if(!hasFailure) { reply(SmtpProtocolConstants.CODE_OK, "OK"); }
                 continue;
             }
 
@@ -174,6 +183,7 @@ public class SmtpTransactionHandler {
     
     private SmtpCommand nextCommand() throws SmtpProtocolException {
         SmtpCommand command = SmtpCommand.parse(nextLine());
+System.out.println(command);
         while(command!=null) {
             Type commandType = command.getType();
             if(commandType==Type.NOOP) { reply(SmtpProtocolConstants.CODE_OK, "OK"); }
