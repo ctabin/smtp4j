@@ -3,6 +3,9 @@ package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessage;
+import ch.astorm.smtp4j.protocol.SmtpProtocolConstants;
+import ch.astorm.smtp4j.util.MimeMessageBuilder;
+import jakarta.mail.MessagingException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -95,6 +98,23 @@ public class SmtpServerTest {
         try(SmtpServer server = builder.start()) {
             List<SmtpMessage> messages = server.readReceivedMessages(-1, TimeUnit.MILLISECONDS);
             assertTrue(messages.isEmpty());
+        }
+    }
+    
+    @Test
+    public void testMessageRefused() throws Exception {
+        SmtpServerBuilder builder = new SmtpServerBuilder();
+        try(SmtpServer server = builder.start()) {
+            server.addListener((srv, msg) -> {
+                throw new IllegalStateException("Message refused");
+            });
+            
+            MessagingException me = assertThrows(MessagingException.class, () -> new MimeMessageBuilder(server).
+                to("test@astorm.ch").
+                subject("Test").
+                body("Hello!").
+                send());
+            assertEquals(SmtpProtocolConstants.CODE_TRANSACTION_FAILED+" Message refused", me.getMessage().trim());
         }
     }
 }
