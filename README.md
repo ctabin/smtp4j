@@ -302,11 +302,15 @@ try(SmtpServer server = builder.start()) {
         throw new IllegalStateException("Message refused");
     });
     
-    new MimeMessageBuilder(server).
-        to("test@astorm.ch").
-        subject("Test").
-        body("Hello!").
-        send()); //a MessagingException will be thrown here !
+    try {
+        new MimeMessageBuilder(server).
+            to("test@astorm.ch").
+            subject("Test").
+            body("Hello!").
+            send();
+    } catch(MessagingException e) {
+        String message = e.getMessage(); //554 Message refused
+    }
 }
 ```
 
