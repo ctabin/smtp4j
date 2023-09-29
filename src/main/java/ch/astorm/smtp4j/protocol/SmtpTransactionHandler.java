@@ -183,7 +183,6 @@ public class SmtpTransactionHandler {
     
     private SmtpCommand nextCommand() throws SmtpProtocolException {
         SmtpCommand command = SmtpCommand.parse(nextLine());
-System.out.println(command);
         while(command!=null) {
             Type commandType = command.getType();
             if(commandType==Type.NOOP) { reply(SmtpProtocolConstants.CODE_OK, "OK"); }
