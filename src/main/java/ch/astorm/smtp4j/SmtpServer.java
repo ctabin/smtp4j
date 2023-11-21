@@ -117,7 +117,7 @@ public class SmtpServer implements AutoCloseable {
     /**
      * Returns a new {@link SmtpMessageReader} to read incoming messages.
      *
-     * @return A new {code SmtpMessageReader} instance.
+     * @return A new {@code SmtpMessageReader} instance.
      * @see SmtpMessageHandler#messageReader()
      */
     public SmtpMessageReader receivedMessageReader() {
