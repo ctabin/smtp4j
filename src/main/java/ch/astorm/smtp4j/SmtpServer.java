@@ -6,6 +6,8 @@ import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageReader;
 import ch.astorm.smtp4j.core.SmtpServerListener;
+import ch.astorm.smtp4j.firewall.AllowAllSmtpFirewall;
+import ch.astorm.smtp4j.firewall.SmtpFirewall;
 import ch.astorm.smtp4j.protocol.SmtpProtocolException;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
 import ch.astorm.smtp4j.util.CloseableReentrantLock;
@@ -26,13 +28,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -51,6 +50,7 @@ public class SmtpServer implements AutoCloseable {
     private final ExecutorService executorService;
     private final Duration socketTimeout;
     private final Long maxMessageSize;
+    private final SmtpFirewall firewall;
 
     private volatile ServerSocket serverSocket;
     private Future<?> serverThread;
@@ -72,7 +72,7 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      */
     public SmtpServer(int port) {
-        this(port, null, null, null, null);
+        this(port, null, null, null, null, AllowAllSmtpFirewall.INSTANCE);
     }
 
     /**
@@ -88,14 +88,16 @@ public class SmtpServer implements AutoCloseable {
      * @param executorService The {@link ExecutorService} to use.
      * @param socketTimeout   The socket timeout duration for any network communication.
      * @param maxMessageSize  The maximum message size before the handler closes the connection
+     * @param firewall
      */
-    public SmtpServer(int port, SmtpMessageHandler messageHandler, ExecutorService executorService, Duration socketTimeout, Long maxMessageSize) {
+    public SmtpServer(int port, SmtpMessageHandler messageHandler, ExecutorService executorService, Duration socketTimeout, Long maxMessageSize, SmtpFirewall firewall) {
         this.port = port;
         this.messageHandler = messageHandler != null ? messageHandler : new DefaultSmtpMessageHandler();
         this.executorService = executorService != null ? executorService : Executors.newWorkStealingPool();
         this.listeners = new ArrayList<>(4);
         this.socketTimeout = socketTimeout;
         this.maxMessageSize = maxMessageSize;
+        this.firewall = firewall;
     }
 
     /**
@@ -334,6 +336,10 @@ public class SmtpServer implements AutoCloseable {
             while (serverSocket != null) {
                 try {
                     Socket socket = serverSocket.accept();
+                    if (!firewall.accept(socket.getInetAddress())) {
+                        socket.close();
+                    }
+
                     LOG.log(Level.FINER, "Got connection from " + socket.getRemoteSocketAddress());
                     executorService.submit(() -> handleConnection(socket));
                 } catch (IOException e) {
@@ -346,7 +352,7 @@ public class SmtpServer implements AutoCloseable {
         private void handleConnection(Socket socket) {
             try (socket;
                  BufferedReader input = new BufferedReader(new InputStreamReader(
-                         wrapMaxMessageSizeStream(socket.getInputStream()),
+                         firewall.firewallInputStream(wrapMaxMessageSizeStream(socket.getInputStream())),
                          StandardCharsets.ISO_8859_1));
                  PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1))) {
 
@@ -358,7 +364,7 @@ public class SmtpServer implements AutoCloseable {
                     }
                 }
 
-                SmtpTransactionHandler.handle(input, output, SmtpServer.this::notifyMessage);
+                SmtpTransactionHandler.handle(input, output, firewall, SmtpServer.this::notifyMessage);
             } catch (SmtpProtocolException spe) {
                 LOG.log(Level.WARNING, "Protocol Exception", spe);
             } catch (IOException ioe) {

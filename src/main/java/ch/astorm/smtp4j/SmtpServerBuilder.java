@@ -3,6 +3,8 @@ package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
+import ch.astorm.smtp4j.firewall.AllowAllSmtpFirewall;
+import ch.astorm.smtp4j.firewall.SmtpFirewall;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -20,6 +22,7 @@ public class SmtpServerBuilder {
     private ExecutorService executorService;
     private Duration socketTimeout;
     private Long maxMessageSize;
+    private SmtpFirewall firewall = AllowAllSmtpFirewall.INSTANCE;
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
@@ -39,7 +42,7 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, SmtpMessageHandler, ExecutorService, Duration, Long)
+     * @see SmtpServer#SmtpServer(int, SmtpMessageHandler, ExecutorService, Duration, Long, SmtpFirewall)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
@@ -95,12 +98,23 @@ public class SmtpServerBuilder {
     }
 
     /**
+     * Sets the {@code SmtpFirewall} to be used by the {@code SmtpServer}.
+     *
+     * @param firewall The firewall configuration to use for the server.
+     * @return This builder, to allow method chaining.
+     */
+    public SmtpServerBuilder withFirewall(SmtpFirewall firewall) {
+        this.firewall = firewall;
+        return this;
+    }
+
+    /**
      * Builds the {@code SmtpServer}.
      *
      * @return A new {@code SmtpServer} instance.
      */
     public SmtpServer build() {
-        SmtpServer server = new SmtpServer(port, handler, executorService, socketTimeout, maxMessageSize);
+        SmtpServer server = new SmtpServer(port, handler, executorService, socketTimeout, maxMessageSize, firewall);
         if (listeners != null) {
             listeners.forEach(server::addListener);
         }

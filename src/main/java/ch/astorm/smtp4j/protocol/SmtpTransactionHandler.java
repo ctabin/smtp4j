@@ -2,6 +2,7 @@
 package ch.astorm.smtp4j.protocol;
 
 import ch.astorm.smtp4j.core.SmtpMessage;
+import ch.astorm.smtp4j.firewall.SmtpFirewall;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
 
 import java.io.BufferedReader;
@@ -17,6 +18,7 @@ public class SmtpTransactionHandler {
     private final BufferedReader input;
     private final PrintWriter output;
     private final MessageReceiver messageReceiver;
+    private final SmtpFirewall firewall;
 
     /**
      * Represents a message receiver within the SMTP transaction.
@@ -34,9 +36,10 @@ public class SmtpTransactionHandler {
         void receiveMessage(SmtpMessage message);
     }
 
-    private SmtpTransactionHandler(BufferedReader input, PrintWriter output, MessageReceiver messageReceiver) {
+    private SmtpTransactionHandler(BufferedReader input, PrintWriter output, SmtpFirewall firewall, MessageReceiver messageReceiver) {
         this.input = input;
         this.output = output;
+        this.firewall = firewall;
         this.messageReceiver = messageReceiver;
     }
 
@@ -45,10 +48,11 @@ public class SmtpTransactionHandler {
      *
      * @param input           The input scanner.
      * @param output          The output writer.
+     * @param firewall
      * @param messageReceiver The {@code MessageReceiver}.
      */
-    public static void handle(BufferedReader input, PrintWriter output, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
-        SmtpTransactionHandler sth = new SmtpTransactionHandler(input, output, messageReceiver);
+    public static void handle(BufferedReader input, PrintWriter output, SmtpFirewall firewall, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
+        SmtpTransactionHandler sth = new SmtpTransactionHandler(input, output, firewall, messageReceiver);
         sth.execute();
     }
 
@@ -83,6 +87,7 @@ public class SmtpTransactionHandler {
     private final List<SmtpExchange> exchanges = new ArrayList<>(32);
 
     private void readTransaction() throws SmtpProtocolException {
+        mainLoop:
         while (true) {
             SmtpCommand command = nextCommand();
             Type commandType = command.getType();
@@ -91,7 +96,12 @@ public class SmtpTransactionHandler {
                 if (commandType == Type.MAIL_FROM) {
                     String enbraced = command.getParameter(); //enclosed: <mail_value>
                     mailFrom = enbraced.substring(1, enbraced.length() - 1);
-                    reply(SmtpProtocolConstants.CODE_OK, "OK");
+                    if (!firewall.isAllowedFrom(mailFrom)) {
+                        reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Mail-From forbidden");
+                        break;
+                    } else {
+                        reply(SmtpProtocolConstants.CODE_OK, "OK");
+                    }
                 } else if (commandType == Type.QUIT) {
                     reply(SmtpProtocolConstants.CODE_OK, "OK");
                     break;
@@ -110,7 +120,12 @@ public class SmtpTransactionHandler {
                 recipients = new ArrayList<>();
                 while (commandType == Type.RECIPIENT) {
                     String enbraced = command.getParameter(); //enclosed: <mail_value>
-                    recipients.add(enbraced.substring(1, enbraced.length() - 1));
+                    String recipient = enbraced.substring(1, enbraced.length() - 1);
+                    if (!firewall.isAllowedRecipient(recipient)) {
+                        reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Recipient forbidden");
+                        break mainLoop;
+                    }
+                    recipients.add(recipient);
                     reply(SmtpProtocolConstants.CODE_OK, "OK");
 
                     command = nextCommand();
@@ -133,7 +148,12 @@ public class SmtpTransactionHandler {
                     //DATA content must end with a dot on a single line
                     if (currentLine.equals(SmtpProtocolConstants.DOT)) {
                         smtpMessageContent.delete(smtpMessageContent.length() - SmtpProtocolConstants.CRLF.length(), smtpMessageContent.length());
-                        SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString(), new ArrayList<>(exchanges));
+                        String messageContent = smtpMessageContent.toString();
+                        if (!firewall.isAllowedMessage(messageContent)) {
+                            reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Message forbidden");
+                            break mainLoop;
+                        }
+                        SmtpMessage message = SmtpMessage.create(mailFrom, recipients, messageContent, new ArrayList<>(exchanges));
                         try {
                             messageReceiver.receiveMessage(message);
                             resetState();

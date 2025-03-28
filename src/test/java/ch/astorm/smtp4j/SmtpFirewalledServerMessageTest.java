@@ -1,0 +1,154 @@
+
+package ch.astorm.smtp4j;
+
+import ch.astorm.smtp4j.firewall.SmtpFirewall;
+import ch.astorm.smtp4j.util.MimeMessageBuilder;
+import jakarta.mail.MessagingException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import java.io.InputStream;
+import java.net.InetAddress;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+public class SmtpFirewalledServerMessageTest {
+    private static SmtpServer smtpServer;
+
+    private static class DynamicSmtpFirewall implements SmtpFirewall {
+        private boolean acceptRemote = true;
+        private boolean acceptFrom = true;
+        private boolean acceptRecipient = true;
+        private boolean acceptMessage = true;
+
+        @Override
+        public boolean accept(InetAddress inetAddress) {
+            return acceptRemote;
+        }
+
+        @Override
+        public InputStream firewallInputStream(InputStream inputStream) {
+            return SmtpFirewall.super.firewallInputStream(inputStream);
+        }
+
+        @Override
+        public boolean isAllowedFrom(String mailFrom) {
+            assertNotNull(mailFrom);
+
+            return acceptFrom;
+        }
+
+        @Override
+        public boolean isAllowedRecipient(String recipient) {
+            assertNotNull(recipient);
+
+            return acceptRecipient;
+        }
+
+        @Override
+        public boolean isAllowedMessage(String message) {
+            assertNotNull(message);
+
+            return acceptMessage;
+        }
+
+        public void reset() {
+            acceptRemote = true;
+            acceptFrom = true;
+            acceptRecipient = true;
+            acceptMessage = true;
+        }
+
+        public void setAcceptRemote(boolean acceptRemote) {
+            this.acceptRemote = acceptRemote;
+        }
+
+        public void setAcceptFrom(boolean acceptFrom) {
+            this.acceptFrom = acceptFrom;
+        }
+
+        public void setAcceptRecipient(boolean acceptRecipient) {
+            this.acceptRecipient = acceptRecipient;
+        }
+
+        public void setAcceptMessage(boolean acceptMessage) {
+            this.acceptMessage = acceptMessage;
+        }
+    }
+
+    private final static DynamicSmtpFirewall firewall = new DynamicSmtpFirewall();
+
+    @BeforeAll
+    public static void init() throws Exception {
+        smtpServer = new SmtpServerBuilder()
+                .withPort(1025)
+                .withFirewall(firewall)
+                .start();
+    }
+
+    @AfterAll
+    public static void after() throws Exception {
+        smtpServer.close();
+    }
+
+    @AfterEach
+    public void reset() {
+        firewall.reset();
+    }
+
+    @Test
+    public void testAcceptRemote() throws Exception {
+        firewall.setAcceptRemote(false);
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
+                .from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Test simple message 1")
+                .body("Test simple message 1");
+
+        String message = assertThrows(MessagingException.class, messageBuilder::send).getMessage();
+        assertTrue(message.contains("response: [EOF]"));
+    }
+
+    @Test
+    public void testAcceptFrom() throws Exception {
+        firewall.setAcceptFrom(false);
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
+                .from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Test simple message 1")
+                .body("Test simple message 1");
+
+        String message = assertThrows(MessagingException.class, messageBuilder::send).getMessage();
+        assertTrue(message.contains("403 Mail-From forbidden"));
+    }
+
+    @Test
+    public void testAcceptRecipient() throws Exception {
+        firewall.setAcceptRecipient(false);
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
+                .from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Test simple message 1")
+                .body("Test simple message 1");
+
+        String message = assertThrows(MessagingException.class, messageBuilder::send).getMessage();
+        assertNotNull(message);
+    }
+
+    @Test
+    public void testAcceptMessage() throws Exception {
+        firewall.setAcceptMessage(false);
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
+                .from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Test simple message 1")
+                .body("Test simple message 1");
+
+        String message = assertThrows(MessagingException.class, messageBuilder::send).getMessage();
+        assertNotNull(message);
+    }
+}

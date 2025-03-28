@@ -18,7 +18,7 @@ with the following improvements:
     - This gives us Virtual Threads support
 - Use ExecutorService for handling new connections
 - Message size limitation
-- WIP: Remote IP restriction
+- Remote IP restriction (via SmtpFirewall)
 
 Here is the compatibility map of this API:
 

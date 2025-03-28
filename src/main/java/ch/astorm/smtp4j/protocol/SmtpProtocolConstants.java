@@ -51,6 +51,11 @@ public class SmtpProtocolConstants {
     public static final int CODE_INTERMEDIATE_REPLY = 354;
 
     /**
+     * Code when the command is forbidden, e.g., by the {@link ch.astorm.smtp4j.firewall.SmtpFirewall}.
+     */
+    public static final int CODE_FORBIDDEN = 403;
+
+    /**
      * Error code when a command is unknown.
      */
     public static final int CODE_COMMAND_UNKNOWN = 500;
@@ -59,7 +64,7 @@ public class SmtpProtocolConstants {
      * Error code when a bad sequence of command has been received.
      */
     public static final int CODE_BAD_COMMAND_SEQUENCE = 503;
-    
+
     /**
      * Error code when a transaction has failed.
      */
