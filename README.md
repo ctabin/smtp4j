@@ -10,7 +10,7 @@ Simple API to fake an SMTP server for Unit testing (and more).
 
 This API is inspired from
 [dumbster](https://github.com/kirviq/dumbster)
-and cloned from [ctabin/smtp4j](https://github.com/ctabin/smtp4j)
+and forked (28.3.2025) from [ctabin/smtp4j](https://github.com/ctabin/smtp4j)
 with the following improvements:
 
 - Java 22
