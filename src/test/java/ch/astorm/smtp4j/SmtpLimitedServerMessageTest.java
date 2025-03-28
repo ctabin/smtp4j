@@ -1,0 +1,79 @@
+
+package ch.astorm.smtp4j;
+
+import ch.astorm.smtp4j.core.SmtpMessage;
+import ch.astorm.smtp4j.util.MimeMessageBuilder;
+import jakarta.mail.MessagingException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+public class SmtpLimitedServerMessageTest {
+    private static SmtpServer smtpServer;
+
+    @BeforeAll
+    public static void init() throws Exception {
+        SmtpServerBuilder builder = new SmtpServerBuilder();
+        smtpServer = builder.withPort(1025)
+                .withMaxMessageSize(1024)
+                .start();
+    }
+
+    @AfterAll
+    public static void after() throws Exception {
+        smtpServer.close();
+    }
+
+    @Test
+    public void testSimpleMessage() throws Exception {
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
+                .from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Test simple message 1")
+                .body("Test simple message 1");
+
+        messageBuilder.send();
+
+        List<SmtpMessage> messages = smtpServer.readReceivedMessages();
+        assertEquals(1, messages.size());
+        assertEquals("Test simple message 1", messages.getFirst().getSubject());
+
+
+        messageBuilder = new MimeMessageBuilder(smtpServer)
+                .from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Test simple message 2")
+                .body("Test simple message 2");
+
+        messageBuilder.send();
+
+        messages = smtpServer.readReceivedMessages();
+        assertEquals(1, messages.size());
+        assertEquals("Test simple message 2", messages.getFirst().getSubject());
+    }
+
+    @Test
+    public void testMessageLargeAttachment() throws Exception {
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
+                .from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Message with multiple attachments")
+                .body("Message with multiple attachments");
+
+        String fileContent;
+        {
+            fileContent = "This is some file content. - Enjoy !\r\n".repeat(10000);
+
+            messageBuilder.attachment("data.txt", "text/plain", new ByteArrayInputStream(fileContent.getBytes(StandardCharsets.UTF_8)));
+        }
+
+        assertThrows(MessagingException.class, messageBuilder::send);
+    }
+}

@@ -15,7 +15,7 @@ public class SmtpCommand {
     /**
      * Represents the SMTP command types.
      */
-    public static enum Type {
+    public enum Type {
         EHLO("EHLO", "HELO"),
         QUIT("QUIT"),
         MAIL_FROM("MAIL FROM:"),
@@ -29,7 +29,7 @@ public class SmtpCommand {
         UNKNOWN("#UNKN#");
 
         private final List<String> cmds;
-        private Type(String... cmds) { this.cmds = Arrays.asList(cmds); }
+        Type(String... cmds) { this.cmds = Arrays.asList(cmds); }
         public boolean matches(String cmd) { return this.cmds.contains(cmd.toUpperCase(Locale.ROOT)); }
     }
 

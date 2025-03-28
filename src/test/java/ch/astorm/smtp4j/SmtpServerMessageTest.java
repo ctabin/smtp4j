@@ -15,6 +15,10 @@ import jakarta.mail.internet.MimeBodyPart;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
 import jakarta.mail.util.ByteArrayDataSource;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -28,24 +32,22 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
-import org.junit.jupiter.api.AfterAll;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 
 public class SmtpServerMessageTest {
     private static SmtpServer smtpServer;
 
     @BeforeAll
     public static void init() throws Exception {
-        SmtpServerBuilder builder = new SmtpServerBuilder();
-        smtpServer = builder.withPort(1025).start();
+        smtpServer = new SmtpServerBuilder()
+                .withPort(1025)
+                .start();
     }
 
     @AfterAll
@@ -71,20 +73,20 @@ public class SmtpServerMessageTest {
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
 
-        SmtpMessage message = received.get(0);
+        SmtpMessage message = received.getFirst();
         assertEquals("from@local.host", message.getFrom());
         assertEquals("from@local.host", message.getSourceFrom());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
-        assertEquals(Arrays.asList("target3@local.host"), message.getRecipients(RecipientType.CC));
+        assertEquals(List.of("target1@local.host", "target2@local.host", "target3@local.host", "target4@local.host"), message.getSourceRecipients());
+        assertEquals(List.of("target1@local.host", "target2@local.host"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target3@local.host"), message.getRecipients(RecipientType.CC));
         assertTrue(message.getRecipients(RecipientType.BCC).isEmpty());
         assertEquals("Subject éèôîï & Â%=", message.getSubject());
         assertEquals("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", message.getBody());
         assertTrue(message.getAttachments().isEmpty());
         assertNotNull(message.getMimeMessage());
         assertNotNull(message.getRawMimeContent());
-        
-        for(SmtpExchange e : message.getSmtpExchanges()) {
+
+        for (SmtpExchange e : message.getSmtpExchanges()) {
             assertNotNull(e.getReceivedData());
             assertNotNull(e.getRepliedData());
         }
@@ -93,44 +95,44 @@ public class SmtpServerMessageTest {
     @Test
     public void testMultipleAddresses() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
-        messageBuilder.from("from@local.host").
-                       to("target1to@local.host, Cédric 2 TO <target2@smtp4j.local>", "another-targer@smtp4j.local").
-                       cc("target1cc@local.host, Rôgë 2 CC <target2@smtp4j.local>").
-                       bcc("target1bcc@local.host, Îrfen 2 BCC <target2@smtp4j.local>").
-                       toRecipient(RecipientType.TO, "anotherTo@smtp4j.local").
-                       subject("Subject test").
-                       body("Some simple message");
+        messageBuilder.from("from@local.host")
+                .to("target1to@local.host, Cédric 2 TO <target2@smtp4j.local>", "another-targer@smtp4j.local")
+                .cc("target1cc@local.host, Rôgë 2 CC <target2@smtp4j.local>")
+                .bcc("target1bcc@local.host, Îrfen 2 BCC <target2@smtp4j.local>")
+                .toRecipient(RecipientType.TO, "anotherTo@smtp4j.local")
+                .subject("Subject test")
+                .body("Some simple message");
         messageBuilder.send();
 
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
 
-        SmtpMessage message = received.get(0);
-        assertEquals(Arrays.asList("target1to@local.host", "Cédric 2 TO <target2@smtp4j.local>","another-targer@smtp4j.local","anotherTo@smtp4j.local"), message.getRecipients(RecipientType.TO));
+        SmtpMessage message = received.getFirst();
+        assertEquals(Arrays.asList("target1to@local.host", "Cédric 2 TO <target2@smtp4j.local>", "another-targer@smtp4j.local", "anotherTo@smtp4j.local"), message.getRecipients(RecipientType.TO));
         assertEquals(Arrays.asList("target1cc@local.host", "Rôgë 2 CC <target2@smtp4j.local>"), message.getRecipients(RecipientType.CC));
     }
-    
+
     @Test
     public void testSimpleMessageMultiPart() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
-        messageBuilder.from(new InternetAddress("from@local.host")).
-                       to(new InternetAddress("target1@local.host")).
-                       to(new InternetAddress("target2@local.host")).
-                       cc(new InternetAddress("target3@local.host")).
-                       bcc(new InternetAddress("target4@local.host")).
-                       subject("Subject éèôîï & Â%=", StandardCharsets.UTF_8).
-                       body("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", StandardCharsets.UTF_8);
+        messageBuilder.from(new InternetAddress("from@local.host"))
+                .to(new InternetAddress("target1@local.host"))
+                .to(new InternetAddress("target2@local.host"))
+                .cc(new InternetAddress("target3@local.host"))
+                .bcc(new InternetAddress("target4@local.host"))
+                .subject("Subject éèôîï & Â%=", StandardCharsets.UTF_8)
+                .body("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", StandardCharsets.UTF_8);
         messageBuilder.send();
-        
+
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
 
-        SmtpMessage message = received.get(0);
+        SmtpMessage message = received.getFirst();
         assertEquals("from@local.host", message.getFrom());
         assertEquals("from@local.host", message.getSourceFrom());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
-        assertEquals(Arrays.asList("target3@local.host"), message.getRecipients(RecipientType.CC));
+        assertEquals(List.of("target1@local.host", "target2@local.host", "target3@local.host", "target4@local.host"), message.getSourceRecipients());
+        assertEquals(List.of("target1@local.host", "target2@local.host"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target3@local.host"), message.getRecipients(RecipientType.CC));
         assertTrue(message.getRecipients(RecipientType.BCC).isEmpty());
         assertEquals("Subject éèôîï & Â%=", message.getSubject());
         assertEquals("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", message.getBody());
@@ -138,31 +140,31 @@ public class SmtpServerMessageTest {
         assertNotNull(message.getMimeMessage());
         assertNotNull(message.getRawMimeContent());
     }
-    
+
     @Test
     public void testSimpleMessageMultiPartNoCharset() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
-        messageBuilder.from("from@local.host").
-                       to("target1@local.host").
-                       to("target2@local.host").
-                       cc("target3@local.host").
-                       bcc("target4@local.host").
-                       at("31.12.2020 23:59:59").
-                       subject("Subject éèôîï & Â%=").
-                       body("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.");
+        messageBuilder.from("from@local.host")
+                .to("target1@local.host")
+                .to("target2@local.host")
+                .cc("target3@local.host")
+                .bcc("target4@local.host")
+                .at("31.12.2020 23:59:59")
+                .subject("Subject éèôîï & Â%=")
+                .body("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.");
         messageBuilder.send();
-        
-        assertThrows(IllegalStateException.class, () -> messageBuilder.send());
-        
+
+        assertThrows(IllegalStateException.class, messageBuilder::send);
+
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
 
-        SmtpMessage message = received.get(0);
+        SmtpMessage message = received.getFirst();
         assertEquals("from@local.host", message.getFrom());
         assertEquals("from@local.host", message.getSourceFrom());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
-        assertEquals(Arrays.asList("target3@local.host"), message.getRecipients(RecipientType.CC));
+        assertEquals(List.of("target1@local.host", "target2@local.host", "target3@local.host", "target4@local.host"), message.getSourceRecipients());
+        assertEquals(List.of("target1@local.host", "target2@local.host"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target3@local.host"), message.getRecipients(RecipientType.CC));
         assertTrue(message.getRecipients(RecipientType.BCC).isEmpty());
         assertEquals(new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").parse("31.12.2020 23:59:59"), message.getSentDate());
         assertEquals("Subject éèôîï & Â%=", message.getSubject());
@@ -201,12 +203,12 @@ public class SmtpServerMessageTest {
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
         assertTrue(smtpServer.readReceivedMessages().isEmpty());
-        
-        SmtpMessage message = received.get(0);
+
+        SmtpMessage message = received.getFirst();
         assertEquals("Cédric <info@smtp4j.local>", message.getFrom());
         assertEquals("info@smtp4j.local", message.getSourceFrom());
-        assertEquals(Arrays.asList("Méphisto <user_daemon@underground.local>"), message.getRecipients(RecipientType.TO));
-        assertEquals(Arrays.asList("user_daemon@underground.local"), message.getSourceRecipients());
+        assertEquals(List.of("Méphisto <user_daemon@underground.local>"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("user_daemon@underground.local"), message.getSourceRecipients());
         assertTrue(message.getRecipients(RecipientType.CC).isEmpty());
         assertEquals("Here is your _list_ of *SOULS*", message.getSubject());
         assertEquals(sentDate, message.getSentDate());
@@ -215,38 +217,44 @@ public class SmtpServerMessageTest {
         List<SmtpAttachment> attachments = message.getAttachments();
         assertEquals(1, attachments.size());
 
-        SmtpAttachment attachment = attachments.get(0);
+        SmtpAttachment attachment = attachments.getFirst();
         assertEquals("file.txt", attachment.getFilename());
         assertEquals("text/plain; charset=us-ascii; name=file.txt", attachment.getContentType());
 
         String attContent;
-        try(BufferedReader reader = new BufferedReader(new InputStreamReader(attachment.openStream(), StandardCharsets.UTF_8))) { attContent = reader.readLine(); }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(attachment.openStream(), StandardCharsets.UTF_8))) {
+            attContent = reader.readLine();
+        }
         assertEquals("Some content", attContent);
 
-        try { attachment.openStream(); fail("Error expected"); }
-        catch(IOException ioe) { /* ok */ }
+        try (var _ = attachment.openStream()) {
+            fail("Error expected");
+        } catch (IOException ioe) { /* ok */ }
     }
 
     @Test
     public void testMessageWithMultipleAttachments() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
-        messageBuilder.from("source@smtp4j.local").
-                to("target@smtp4j.local").
-                subject("Message with multiple attachments", StandardCharsets.UTF_8).
-                body("There is your content", StandardCharsets.UTF_8);
-        
-        String dynContent = "";
+        messageBuilder.from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Message with multiple attachments", StandardCharsets.UTF_8)
+                .body("There is your content", StandardCharsets.UTF_8);
+
+        StringBuilder dynContent = new StringBuilder();
         {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try(ZipOutputStream zos = new ZipOutputStream(baos)) {
+            try (ZipOutputStream zos = new ZipOutputStream(baos)) {
                 zos.putNextEntry(new ZipEntry("content/"));
                 zos.closeEntry();
                 zos.putNextEntry(new ZipEntry("content/file.txt"));
-                for(int i=0 ; i<5000 ; ++i) {
-                    String toAdd = "some TXT Content. #/";;
-                    if(i%100==0 && i>0) { toAdd += "\r\n"; }
+                for (int i = 0; i < 5000; ++i) {
+                    String toAdd = "some TXT Content. #/";
 
-                    dynContent += toAdd;
+                    if (i % 100 == 0 && i > 0) {
+                        toAdd += "\r\n";
+                    }
+
+                    dynContent.append(toAdd);
 
                     byte[] strBytes = toAdd.getBytes(StandardCharsets.UTF_8);
                     zos.write(strBytes);
@@ -259,10 +267,8 @@ public class SmtpServerMessageTest {
 
         String fileContent;
         {
-            StringBuilder builder = new StringBuilder(1024);
-            for(int i=0 ; i<50000 ; ++i) { builder.append("This is some file content. - Enjoy !\r\n"); }
-            fileContent = builder.toString();
-            
+            fileContent = "This is some file content. - Enjoy !\r\n".repeat(50000);
+
             messageBuilder.attachment("data.txt", "text/plain", new ByteArrayInputStream(fileContent.getBytes(StandardCharsets.UTF_8)));
         }
 
@@ -272,16 +278,18 @@ public class SmtpServerMessageTest {
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
 
-        SmtpMessage message = received.get(0);
+        SmtpMessage message = received.getFirst();
         List<SmtpAttachment> attachments = message.getAttachments();
         assertEquals(2, attachments.size());
 
         {
-            SmtpAttachment attachment = attachments.get(0);
+            SmtpAttachment attachment = attachments.getFirst();
             assertEquals("file.zip", attachment.getFilename());
 
-            try(ZipInputStream zis = new ZipInputStream(attachment.openStream())) {
-                assertEquals("content/", zis.getNextEntry().getName());
+            try (ZipInputStream zis = new ZipInputStream(attachment.openStream())) {
+                ZipEntry zipEntry = zis.getNextEntry();
+                assertNotNull(zipEntry);
+                assertEquals("content/", zipEntry.getName());
                 zis.closeEntry();
 
                 ZipEntry fileEntry = zis.getNextEntry();
@@ -290,13 +298,13 @@ public class SmtpServerMessageTest {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 byte[] buffer = new byte[1024];
                 int read = zis.read(buffer);
-                while(read>=0) {
+                while (read >= 0) {
                     baos.write(buffer, 0, read);
                     read = zis.read(buffer);
                 }
 
-                String str = new String(baos.toByteArray(), StandardCharsets.UTF_8);
-                assertEquals(dynContent, str);
+                String str = baos.toString(StandardCharsets.UTF_8);
+                assertEquals(dynContent.toString(), str);
             }
         }
 
@@ -305,9 +313,9 @@ public class SmtpServerMessageTest {
             assertEquals("data.txt", attachment.getFilename());
 
             StringBuilder builder = new StringBuilder();
-            try(BufferedReader reader = new BufferedReader(new InputStreamReader(attachment.openStream()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(attachment.openStream()))) {
                 String str = reader.readLine();
-                while(str!=null) {
+                while (str != null) {
                     builder.append(str).append("\r\n");
                     str = reader.readLine();
                 }
@@ -315,31 +323,27 @@ public class SmtpServerMessageTest {
             assertEquals(fileContent, builder.toString());
         }
     }
-    
+
     @Test
-    public void testMessageLargeAttachement() throws Exception {
-        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
-                from("source@smtp4j.local").
-                to("target@smtp4j.local").
-                subject("Message with multiple attachments").
-                body("Message with multiple attachments");
+    public void testMessageLargeAttachment() throws Exception {
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
+                .from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Message with multiple attachments")
+                .body("Message with multiple attachments");
 
         String fileContent;
         {
-            StringBuilder builder = new StringBuilder(1024);
-            for(int i=0 ; i<10000 ; ++i) { builder.append("This is some file content. - Enjoy !\r\n"); }
-            fileContent = builder.toString();
+            fileContent = "This is some file content. - Enjoy !\r\n".repeat(10000);
 
             messageBuilder.attachment("data.txt", "text/plain", new ByteArrayInputStream(fileContent.getBytes(StandardCharsets.UTF_8)));
         }
 
         messageBuilder.send();
 
-        //since the buffer is too low, we expect here that the data has been dropped
-        //and hence the whole message has been discarded
         assertEquals(1, smtpServer.readReceivedMessages().size());
     }
-    
+
     @Test
     public void testMessageMultipartWithoutBody() throws Exception {
         Session session = smtpServer.createSession();
@@ -362,28 +366,31 @@ public class SmtpServerMessageTest {
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
 
-        SmtpMessage message = received.get(0);
+        SmtpMessage message = received.getFirst();
 
         assertEquals("info@smtp4j.local", message.getFrom());
-        assertEquals(Arrays.asList("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
         assertEquals("Hi buddy", message.getSubject());
         assertNull(message.getBody());
 
         List<SmtpAttachment> attachments = message.getAttachments();
         assertEquals(1, attachments.size());
 
-        SmtpAttachment attachment = attachments.get(0);
+        SmtpAttachment attachment = attachments.getFirst();
         assertEquals("file.txt", attachment.getFilename());
         assertEquals("text/plain; charset=us-ascii; name=file.txt", attachment.getContentType());
 
         String attContent;
-        try(BufferedReader reader = new BufferedReader(new InputStreamReader(attachment.openStream(), StandardCharsets.UTF_8))) { attContent = reader.readLine(); }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(attachment.openStream(), StandardCharsets.UTF_8))) {
+            attContent = reader.readLine();
+        }
         assertEquals("Some content", attContent);
 
-        try { attachment.openStream(); fail("Error expected"); }
-        catch(IOException ioe) { /* ok */ }
+        try (var _ = attachment.openStream()) {
+            fail("Error expected");
+        } catch (IOException ioe) { /* ok */ }
     }
-    
+
     @Test
     public void testMessageMultipartWithMultipleBody() throws Exception {
         Session session = smtpServer.createSession();
@@ -394,11 +401,11 @@ public class SmtpServerMessageTest {
         msg.setSubject("Hi buddy", StandardCharsets.UTF_8.name());
 
         Multipart mp = new MimeMultipart();
-        
+
         MimeBodyPart body1 = new MimeBodyPart();
         body1.setText("Content BODY1");
         mp.addBodyPart(body1);
-        
+
         MimeBodyPart body2 = new MimeBodyPart();
         body2.setText("Content BODY2");
         mp.addBodyPart(body2);
@@ -410,32 +417,32 @@ public class SmtpServerMessageTest {
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
 
-        SmtpMessage message = received.get(0);
+        SmtpMessage message = received.getFirst();
 
         assertEquals("info@smtp4j.local", message.getFrom());
-        assertEquals(Arrays.asList("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
         assertEquals("Hi buddy", message.getSubject());
         assertEquals("Content BODY1\r\nContent BODY2", message.getBody());
 
         List<SmtpAttachment> attachments = message.getAttachments();
         assertEquals(0, attachments.size());
     }
-    
+
     @Test
     public void testSpecialMessageDataForDot() throws Exception {
         String text = "This méssage has multiple lines in SMTP and a dot.dot.dot.dot.dot.dot..dot.";
-        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
-                from("source@smtp4j.local").
-                to("target@smtp4j.local").
-                subject("Message with multiple attachments").
-                body(text);
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
+                .from("source@smtp4j.local")
+                .to("target@smtp4j.local")
+                .subject("Message with multiple attachments")
+                .body(text);
 
         messageBuilder.send();
 
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
 
-        SmtpMessage message = received.get(0);
+        SmtpMessage message = received.getFirst();
         String body = message.getBody();
         assertEquals(text, body);
     }

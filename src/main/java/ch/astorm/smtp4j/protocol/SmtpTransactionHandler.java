@@ -3,6 +3,7 @@ package ch.astorm.smtp4j.protocol;
 
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -21,7 +22,7 @@ public class SmtpTransactionHandler {
      * Represents a message receiver within the SMTP transaction.
      */
     @FunctionalInterface
-    public static interface MessageReceiver {
+    public interface MessageReceiver {
 
         /**
          * Invoked when a message is received.
@@ -42,8 +43,8 @@ public class SmtpTransactionHandler {
     /**
      * Handles the SMTP protocol communication.
      *
-     * @param input The input scanner.
-     * @param output The output writer.
+     * @param input           The input scanner.
+     * @param output          The output writer.
      * @param messageReceiver The {@code MessageReceiver}.
      */
     public static void handle(BufferedReader input, PrintWriter output, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
@@ -57,10 +58,10 @@ public class SmtpTransactionHandler {
 
         //extends the EHLO/HELO command to greet the client
         SmtpCommand ehlo = SmtpCommand.parse(nextLine());
-        if(ehlo!=null) {
-            if(ehlo.getType()==Type.EHLO) {
+        if (ehlo != null) {
+            if (ehlo.getType() == Type.EHLO) {
                 String param = ehlo.getParameter();
-                reply(SmtpProtocolConstants.CODE_OK, param!=null ? "smtp4j greets "+ehlo.getParameter() : "OK");
+                reply(SmtpProtocolConstants.CODE_OK, param != null ? "smtp4j greets " + ehlo.getParameter() : "OK");
             } else {
                 reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
                 return;
@@ -77,48 +78,48 @@ public class SmtpTransactionHandler {
     private String mailFrom;
     private List<String> recipients;
     private StringBuilder smtpMessageContent;
-    
+
     private final List<String> readData = new ArrayList<>(64);
     private final List<SmtpExchange> exchanges = new ArrayList<>(32);
 
     private void readTransaction() throws SmtpProtocolException {
-        while(true) {
+        while (true) {
             SmtpCommand command = nextCommand();
             Type commandType = command.getType();
 
-            if(mailFrom==null) {
-                if(commandType==Type.MAIL_FROM) {
+            if (mailFrom == null) {
+                if (commandType == Type.MAIL_FROM) {
                     String enbraced = command.getParameter(); //enclosed: <mail_value>
-                    mailFrom = enbraced.substring(1, enbraced.length()-1);
+                    mailFrom = enbraced.substring(1, enbraced.length() - 1);
                     reply(SmtpProtocolConstants.CODE_OK, "OK");
-                } else if(commandType==Type.QUIT) {
+                } else if (commandType == Type.QUIT) {
                     reply(SmtpProtocolConstants.CODE_OK, "OK");
                     break;
                 } else {
                     reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
                 }
                 continue;
-            } 
+            }
 
-            if(recipients==null) {
-                if(commandType!=Type.RECIPIENT) {
+            if (recipients == null) {
+                if (commandType != Type.RECIPIENT) {
                     reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
                     continue;
                 }
 
                 recipients = new ArrayList<>();
-                while(commandType==Type.RECIPIENT) {
+                while (commandType == Type.RECIPIENT) {
                     String enbraced = command.getParameter(); //enclosed: <mail_value>
-                    recipients.add(enbraced.substring(1, enbraced.length()-1));
+                    recipients.add(enbraced.substring(1, enbraced.length() - 1));
                     reply(SmtpProtocolConstants.CODE_OK, "OK");
-                    
+
                     command = nextCommand();
                     commandType = command.getType();
                 }
             }
 
-            if(commandType==Type.DATA) {
-                if(smtpMessageContent!=null) {
+            if (commandType == Type.DATA) {
+                if (smtpMessageContent != null) {
                     reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
                     continue;
                 }
@@ -128,34 +129,38 @@ public class SmtpTransactionHandler {
 
                 boolean hasFailure = false;
                 String currentLine = nextLine();
-                while(currentLine!=null) {
+                while (true) {
                     //DATA content must end with a dot on a single line
-                    if(currentLine.equals(SmtpProtocolConstants.DOT)) {
-                        smtpMessageContent.delete(smtpMessageContent.length()-SmtpProtocolConstants.CRLF.length(), smtpMessageContent.length());
+                    if (currentLine.equals(SmtpProtocolConstants.DOT)) {
+                        smtpMessageContent.delete(smtpMessageContent.length() - SmtpProtocolConstants.CRLF.length(), smtpMessageContent.length());
                         SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString(), new ArrayList<>(exchanges));
                         try {
                             messageReceiver.receiveMessage(message);
                             resetState();
-                        } catch(Exception e) {
+                        } catch (Exception e) {
                             reply(SmtpProtocolConstants.CODE_TRANSACTION_FAILED, e.getMessage());
                             hasFailure = true;
                         }
-                        
+
                         break;
                     } else {
                         //if DATA starts with a dot, a second one must be added
-                        if(currentLine.startsWith(SmtpProtocolConstants.DOT)) { currentLine = currentLine.substring(1); }
+                        if (currentLine.startsWith(SmtpProtocolConstants.DOT)) {
+                            currentLine = currentLine.substring(1);
+                        }
                         smtpMessageContent.append(currentLine).append(SmtpProtocolConstants.CRLF);
                     }
 
                     currentLine = nextLine();
                 }
 
-                if(!hasFailure) { reply(SmtpProtocolConstants.CODE_OK, "OK"); }
+                if (!hasFailure) {
+                    reply(SmtpProtocolConstants.CODE_OK, "OK");
+                }
                 continue;
             }
 
-            if(commandType==Type.QUIT) {
+            if (commandType == Type.QUIT) {
                 reply(SmtpProtocolConstants.CODE_OK, "OK");
                 break;
             } else {
@@ -173,25 +178,36 @@ public class SmtpTransactionHandler {
     private String nextLine() throws SmtpProtocolException {
         try {
             String line = input.readLine();
-            if(line==null) { throw new SmtpProtocolException("Unexpected end of stream (no more line)"); }
+            if (line == null) {
+                throw new SmtpProtocolException("Unexpected end of stream (no more line)");
+            }
             readData.add(line);
             return line;
-        } catch(IOException ioe) {
+        } catch (IOException ioe) {
             throw new SmtpProtocolException("I/O exception", ioe);
         }
     }
-    
+
     private SmtpCommand nextCommand() throws SmtpProtocolException {
         SmtpCommand command = SmtpCommand.parse(nextLine());
-        while(command!=null) {
+        while (command != null) {
             Type commandType = command.getType();
-            if(commandType==Type.NOOP) { reply(SmtpProtocolConstants.CODE_OK, "OK"); }
-            else if(commandType==Type.EXPAND) { reply(SmtpProtocolConstants.CODE_NOT_SUPPORTED, "Not supported"); }
-            else if(commandType==Type.VERIFY) { reply(SmtpProtocolConstants.CODE_NOT_SUPPORTED, "Not supported"); }
-            else if(commandType==Type.HELP) { reply(SmtpProtocolConstants.CODE_NOT_SUPPORTED, "Not supported"); }
-            else if(commandType==Type.UNKNOWN) { reply(SmtpProtocolConstants.CODE_COMMAND_UNKNOWN, "Unknown command"); }
-            else if(commandType==Type.RESET) { resetState(); reply(SmtpProtocolConstants.CODE_OK, "OK"); }
-            else { return command; }
+            if (commandType == Type.NOOP) {
+                reply(SmtpProtocolConstants.CODE_OK, "OK");
+            } else if (commandType == Type.EXPAND) {
+                reply(SmtpProtocolConstants.CODE_NOT_SUPPORTED, "Not supported");
+            } else if (commandType == Type.VERIFY) {
+                reply(SmtpProtocolConstants.CODE_NOT_SUPPORTED, "Not supported");
+            } else if (commandType == Type.HELP) {
+                reply(SmtpProtocolConstants.CODE_NOT_SUPPORTED, "Not supported");
+            } else if (commandType == Type.UNKNOWN) {
+                reply(SmtpProtocolConstants.CODE_COMMAND_UNKNOWN, "Unknown command");
+            } else if (commandType == Type.RESET) {
+                resetState();
+                reply(SmtpProtocolConstants.CODE_OK, "OK");
+            } else {
+                return command;
+            }
 
             command = SmtpCommand.parse(nextLine());
         }
@@ -202,7 +218,7 @@ public class SmtpTransactionHandler {
     private void reply(int code, String message) {
         StringBuilder builder = new StringBuilder(32);
         builder.append(code);
-        if(message!=null) {
+        if (message != null) {
             builder.append(SmtpProtocolConstants.SP);
             builder.append(message);
         }
@@ -211,8 +227,8 @@ public class SmtpTransactionHandler {
         SmtpExchange exchange = new SmtpExchange(new ArrayList<>(readData), builder.toString());
         exchanges.add(exchange);
         readData.clear();
-        
-        output.print(builder.toString());
+
+        output.print(builder);
         output.flush();
     }
 }
