@@ -1,5 +1,5 @@
 [![Maven](https://img.shields.io/maven-central/v/ch.astorm/smtp4j.svg)](https://search.maven.org/search?q=g:ch.astorm%20AND%20a:smtp4j)
-[![Build](https://app.travis-ci.com/ctabin/smtp4j.svg?branch=master)](https://app.travis-ci.com/github/ctabin/smtp4j/branches)
+[![Build](https://app.travis-ci.com/imario42/smtp4j.svg?branch=master)](https://app.travis-ci.com/github/imario42/smtp4j/branches)
 [![javadoc](https://javadoc.io/badge2/ch.astorm/smtp4j/javadoc.svg)](https://javadoc.io/doc/ch.astorm/smtp4j)
 
 # smtp4j
