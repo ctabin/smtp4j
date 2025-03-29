@@ -21,7 +21,7 @@
     <groupId>at.datenwort.commons</groupId>
     <artifactId>smtp4j</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.0</version>
+    <version>1.0.0-SNAPSHOT</version>
     <name>smtp4j</name>
     <description>Simple SMTP Server</description>
     <url>https://github.com/imario42/smtp4j</url>
@@ -40,9 +40,9 @@
     </developers>
     <scm>
         <connection>scm:git:git://github.com/imario42/smtp4j.git</connection>
-        <developerConnection>scm:git:ssh://git@@github.com:imario42/smtp4j.git</developerConnection>
+        <developerConnection>scm:git:imario42@github.com:imario42/smtp4j.git</developerConnection>
         <url>http://github.com/imario42/smtp4j/tree/master</url>
-        <tag>smtp4j-1.0.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
