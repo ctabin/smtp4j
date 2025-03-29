@@ -15,7 +15,8 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>at.datenwort.commons</groupId>
     <artifactId>smtp4j</artifactId>
@@ -128,7 +129,7 @@
                                 <requireJavaVersion>
                                     <version>[24,)</version>
                                 </requireJavaVersion>
-                                <banDuplicatePomDependencyVersions />
+                                <banDuplicatePomDependencyVersions/>
 
                                 <!-- Do not activate this, otherwise it won't be possible to compile
                                      only submodules. -->
@@ -188,9 +189,9 @@
     <dependencies>
         <!-- jakarta.mail API -->
         <dependency>
-            <groupId>com.sun.mail</groupId>
-            <artifactId>jakarta.mail</artifactId>
-            <version>2.0.1</version>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>angus-mail</artifactId>
+            <version>2.0.3</version>
         </dependency>
         <!-- JUnit -->
         <dependency>
