@@ -18,4 +18,8 @@ package ch.astorm.smtp4j.auth;
 
 public interface SmtpAuth {
     byte[] getPasswordForUser(String user);
+
+    default int getMaxTries() {
+        return 3;
+    }
 }

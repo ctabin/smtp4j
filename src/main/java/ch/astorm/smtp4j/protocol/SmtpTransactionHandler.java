@@ -139,6 +139,7 @@ public class SmtpTransactionHandler {
     private void readTransaction() throws SmtpProtocolException {
         boolean inForbiddenState = false;
 
+        int authTries = 0;
         String currentAuthOngoing = null;
         String currentAuthChallenge = null;
 
@@ -182,10 +183,19 @@ public class SmtpTransactionHandler {
             }
 
             if (commandType == Type.AUTH) {
+                authTries++;
+
                 if (auth == null) {
                     reply(SmtpProtocolConstants.CODE_COMMAND_UNKNOWN, "Unknown command");
                     continue;
                 }
+
+                if (authTries > auth.getMaxTries()) {
+                    reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Too many authentication attempts.");
+                    inForbiddenState = true;
+                    continue;
+                }
+
                 String[] authTokens = StringUtils.split(command.getParameter(), " ", 2);
                 if (authTokens.length < 1) {
                     reply(SmtpProtocolConstants.CODE_COMMAND_PARAMETERS_INVALID, "Invalid parameters");
