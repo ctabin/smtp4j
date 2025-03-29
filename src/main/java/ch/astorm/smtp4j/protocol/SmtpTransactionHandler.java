@@ -16,27 +16,44 @@
 
 package ch.astorm.smtp4j.protocol;
 
+import ch.astorm.smtp4j.auth.SmtpAuth;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.firewall.SmtpFirewall;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
 import ch.astorm.smtp4j.util.ByteArrayUtils;
 import ch.astorm.smtp4j.util.LineAwareBufferedInputStream;
+import ch.astorm.smtp4j.util.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 /**
  * Handles the SMTP protocol.
  */
 public class SmtpTransactionHandler {
+    private final static SecureRandom random;
+
+    static {
+        try {
+            random = SecureRandom.getInstanceStrong();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private final LineAwareBufferedInputStream input;
     private final PrintWriter output;
     private final MessageReceiver messageReceiver;
     private final SmtpFirewall firewall;
+    private final SmtpAuth auth;
     private final Long maxMessageSize;
 
     /**
@@ -55,10 +72,11 @@ public class SmtpTransactionHandler {
         void receiveMessage(SmtpMessage message);
     }
 
-    private SmtpTransactionHandler(LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, Long maxMessageSize, MessageReceiver messageReceiver) {
+    private SmtpTransactionHandler(LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, SmtpAuth auth, Long maxMessageSize, MessageReceiver messageReceiver) {
         this.input = input;
         this.output = output;
         this.firewall = firewall;
+        this.auth = auth;
         this.messageReceiver = messageReceiver;
         this.maxMessageSize = maxMessageSize;
     }
@@ -70,10 +88,11 @@ public class SmtpTransactionHandler {
      * @param output          The output writer.
      * @param firewall        The firewall.
      * @param maxMessageSize
+     * @param auth
      * @param messageReceiver The {@code MessageReceiver}.
      */
-    public static void handle(LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, Long maxMessageSize, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
-        SmtpTransactionHandler sth = new SmtpTransactionHandler(input, output, firewall, maxMessageSize, messageReceiver);
+    public static void handle(LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, Long maxMessageSize, SmtpAuth auth, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
+        SmtpTransactionHandler sth = new SmtpTransactionHandler(input, output, firewall, auth, maxMessageSize, messageReceiver);
         sth.execute();
     }
 
@@ -89,11 +108,14 @@ public class SmtpTransactionHandler {
                 if (param == null || param.trim().isEmpty()) {
                     param = "you";
                 }
-                reply(SmtpProtocolConstants.CODE_OK, List.of(
-                        "smtp4j greets " + param,
-                        Type.EIGHT_BIT_MIME.withArgs(null),
-                        Type.SIZE.withArgs(maxMessageSize != null ? maxMessageSize.toString() : "")
-                ));
+                reply(SmtpProtocolConstants.CODE_OK, Stream.of(
+                                "smtp4j greets " + param,
+                                Type.EIGHT_BIT_MIME.withArgs(null),
+                                auth != null ? Type.AUTH.withArgs("CRAM-MD5 PLAIN") : "",
+                                Type.SIZE.withArgs(maxMessageSize != null ? maxMessageSize.toString() : ""))
+                        .filter(s -> !s.isEmpty())
+                        .toList()
+                );
             } else {
                 reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
                 return;
@@ -117,7 +139,35 @@ public class SmtpTransactionHandler {
     private void readTransaction() throws SmtpProtocolException {
         boolean inForbiddenState = false;
 
+        String currentAuthOngoing = null;
+        String currentAuthChallenge = null;
+
         while (true) {
+            if (currentAuthOngoing != null) {
+                try {
+                    String[] credentials = StringUtils.decode(nextLine()).split(" ", 2);
+                    if (credentials.length != 2) {
+                        reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Auth failed");
+                        continue;
+                    }
+
+                    String user = credentials[0];
+                    String pass = credentials[1];
+                    if (Objects.equals(pass,
+                            StringUtils.hashWithHMACMD5(
+                                    currentAuthChallenge,
+                                    auth.getPasswordForUser(user)))) {
+                        reply(SmtpProtocolConstants.CODE_AUTH_OK, "OK");
+                    } else {
+                        reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Auth failed");
+                    }
+                    continue;
+                } finally {
+                    currentAuthOngoing = null;
+                    currentAuthChallenge = null;
+                }
+            }
+
             SmtpCommand command = nextCommand();
             Type commandType = command.getType();
 
@@ -128,6 +178,53 @@ public class SmtpTransactionHandler {
                 }
 
                 reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Subsequent commands forbidden");
+                continue;
+            }
+
+            if (commandType == Type.AUTH) {
+                if (auth == null) {
+                    reply(SmtpProtocolConstants.CODE_COMMAND_UNKNOWN, "Unknown command");
+                    continue;
+                }
+                String[] authTokens = StringUtils.split(command.getParameter(), " ", 2);
+                if (authTokens.length < 1) {
+                    reply(SmtpProtocolConstants.CODE_COMMAND_PARAMETERS_INVALID, "Invalid parameters");
+                    continue;
+                }
+                String authType = StringUtils.toUpperCase(authTokens[0]);
+                switch (authType) {
+                    case "PLAIN":
+                        if (authTokens.length != 2) {
+                            reply(SmtpProtocolConstants.CODE_COMMAND_PARAMETERS_INVALID, "Invalid parameters");
+                            break;
+                        }
+                        String login = authTokens[1];
+                        String[] credentials = StringUtils.decode(login).split("\\x00", 3);
+                        if (credentials.length != 3) {
+                            reply(SmtpProtocolConstants.CODE_COMMAND_PARAMETERS_INVALID, "Invalid parameters");
+                            break;
+                        }
+                        String user = credentials[1];
+                        String pass = credentials[2];
+                        if (ByteArrayUtils.equals(pass.getBytes(StandardCharsets.UTF_8), auth.getPasswordForUser(user))) {
+                            reply(SmtpProtocolConstants.CODE_AUTH_OK, "OK");
+                        } else {
+                            reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Auth failed");
+                        }
+                        break;
+                    case "CRAM-MD5":
+                        currentAuthOngoing = authType;
+                        currentAuthChallenge = String.format("<%d.%d@%s>",
+                                random.nextLong(),
+                                System.currentTimeMillis(),
+                                "mydomain.com");
+                        reply(SmtpProtocolConstants.CODE_SERVER_CHALLENGE, StringUtils.encode(currentAuthChallenge));
+                        break;
+                    default:
+                        reply(SmtpProtocolConstants.CODE_COMMAND_PARAMETERS_INVALID, "Invalid parameters");
+                        break;
+                }
+
                 continue;
             }
 

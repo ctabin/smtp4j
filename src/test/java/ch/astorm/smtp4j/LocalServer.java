@@ -16,6 +16,7 @@
 
 package ch.astorm.smtp4j;
 
+import ch.astorm.smtp4j.auth.SmtpAuth;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import jakarta.mail.Address;
@@ -24,6 +25,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -34,6 +36,12 @@ public class LocalServer {
         try (var server = new SmtpServerBuilder()
                 .withMaxMessageSize(1024 * 1024)
                 .withPort(2525)
+                .withAuth(new SmtpAuth() {
+                    @Override
+                    public byte[] getPasswordForUser(String user) {
+                        return "dummy".getBytes(StandardCharsets.UTF_8);
+                    }
+                })
                 .withMessageHandler(new SmtpMessageHandler() {
                     @Override
                     public SmtpMessageReader messageReader() {
@@ -68,9 +76,7 @@ public class LocalServer {
                         System.out.println("Subject: " + mimeMessage.getSubject());
                         System.out.println("Message\n" + mimeMessage.getContent());
                         System.out.println("<END OF MESSAGE>\n");
-                    } catch (MessagingException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
+                    } catch (MessagingException | IOException e) {
                         e.printStackTrace();
                     }
 

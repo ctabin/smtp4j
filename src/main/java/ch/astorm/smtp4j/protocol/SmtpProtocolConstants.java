@@ -72,6 +72,11 @@ public class SmtpProtocolConstants {
     public static final int CODE_CONNECT = 220;
 
     /**
+     * Auth ok
+     */
+    public static final int CODE_AUTH_OK = 235;
+
+    /**
      * Code when the command is accepted by the server.
      */
     public static final int CODE_OK = 250;
@@ -80,6 +85,11 @@ public class SmtpProtocolConstants {
      * Code when the command is not supported.
      */
     public static final int CODE_NOT_SUPPORTED = 255;
+
+    /**
+     * Code for Server challenge
+     */
+    public static final int CODE_SERVER_CHALLENGE = 334;
 
     /**
      * Code when the command is accepted, but in intermediate state (data).
@@ -97,9 +107,20 @@ public class SmtpProtocolConstants {
     public static final int CODE_COMMAND_UNKNOWN = 500;
 
     /**
+     * Error code when a command is invoked with invalid parameters.
+     */
+    public static final int CODE_COMMAND_PARAMETERS_INVALID = 501;
+
+    /**
      * Error code when a bad sequence of command has been received.
      */
     public static final int CODE_BAD_COMMAND_SEQUENCE = 503;
+
+
+    /**
+     * Error code when the authentication failed.
+     */
+    public static final int CODE_AUTH_FAILED = 535;
 
     /**
      * Error code when a transaction has failed.

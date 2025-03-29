@@ -16,6 +16,7 @@
 
 package ch.astorm.smtp4j;
 
+import ch.astorm.smtp4j.auth.SmtpAuth;
 import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
@@ -65,6 +66,7 @@ public class SmtpServer implements AutoCloseable {
     private final Duration socketTimeout;
     private final Long maxMessageSize;
     private final SmtpFirewall firewall;
+    private final SmtpAuth auth;
 
     private volatile ServerSocket serverSocket;
     private Future<?> serverThread;
@@ -86,7 +88,7 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      */
     public SmtpServer(int port) {
-        this(port, null, null, null, null, AllowAllSmtpFirewall.INSTANCE);
+        this(port, null, null, null, null, AllowAllSmtpFirewall.INSTANCE, null);
     }
 
     /**
@@ -103,8 +105,9 @@ public class SmtpServer implements AutoCloseable {
      * @param socketTimeout   The socket timeout duration for any network communication.
      * @param maxMessageSize  The maximum message size before the handler closes the connection
      * @param firewall
+     * @param auth
      */
-    public SmtpServer(int port, SmtpMessageHandler messageHandler, ExecutorService executorService, Duration socketTimeout, Long maxMessageSize, SmtpFirewall firewall) {
+    public SmtpServer(int port, SmtpMessageHandler messageHandler, ExecutorService executorService, Duration socketTimeout, Long maxMessageSize, SmtpFirewall firewall, SmtpAuth auth) {
         this.port = port;
         this.messageHandler = messageHandler != null ? messageHandler : new DefaultSmtpMessageHandler();
         this.executorService = executorService != null ? executorService : Executors.newWorkStealingPool();
@@ -112,6 +115,7 @@ public class SmtpServer implements AutoCloseable {
         this.socketTimeout = socketTimeout;
         this.maxMessageSize = maxMessageSize;
         this.firewall = firewall;
+        this.auth = auth;
     }
 
     /**
@@ -387,7 +391,7 @@ public class SmtpServer implements AutoCloseable {
                     }
                 }
 
-                SmtpTransactionHandler.handle(input, output, firewall, maxMessageSize, SmtpServer.this::notifyMessage);
+                SmtpTransactionHandler.handle(input, output, firewall, maxMessageSize, auth, SmtpServer.this::notifyMessage);
             } catch (SmtpProtocolException spe) {
                 LOG.log(Level.WARNING, "Protocol Exception", spe);
             } catch (IOException ioe) {

@@ -44,6 +44,7 @@ public class SmtpCommand {
         RESET("RSET"),
         SIZE("SIZE"),
         EIGHT_BIT_MIME("8BITMIME"),
+        AUTH("AUTH"),
         UNKNOWN("#UNKN#");
 
         private final List<String> cmds;
