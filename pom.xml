@@ -40,7 +40,7 @@
     </developers>
     <scm>
         <connection>scm:git:git://github.com/imario42/smtp4j.git</connection>
-        <developerConnection>scm:git:ssh://git@@github.com:imario42/smtp4j.git</developerConnection>
+        <developerConnection>scm:git:ssh://git@github.com/imario42/smtp4j.git</developerConnection>
         <url>http://github.com/imario42/smtp4j/tree/master</url>
         <tag>HEAD</tag>
     </scm>
