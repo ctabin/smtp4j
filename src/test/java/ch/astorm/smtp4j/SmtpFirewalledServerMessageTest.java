@@ -67,7 +67,7 @@ public class SmtpFirewalledServerMessageTest {
         }
 
         @Override
-        public boolean isAllowedMessage(String message) {
+        public boolean isAllowedMessage(byte[] message) {
             assertNotNull(message);
 
             return acceptMessage;

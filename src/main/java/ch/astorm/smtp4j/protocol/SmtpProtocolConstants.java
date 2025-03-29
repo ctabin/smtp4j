@@ -16,6 +16,8 @@
 
 package ch.astorm.smtp4j.protocol;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * Constants for the SMTP protocol.
  */
@@ -28,10 +30,23 @@ public class SmtpProtocolConstants {
     public static String CRLF = "\r\n";
 
     /**
+     * Line/command break.
+     * See the <a href="https://datatracker.ietf.org/doc/html/rfc2821#section-4.1.1">specification</a>.
+     */
+    public static byte[] CRLF_BYTES = CRLF.getBytes(StandardCharsets.US_ASCII);
+
+    /**
      * Command-parameter separator.
      * See the <a href="https://datatracker.ietf.org/doc/html/rfc2821#section-4.1.1">specification</a>.
      */
     public static String SP = " ";
+
+
+    /**
+     * Multiline response.
+     * See the <a href="https://datatracker.ietf.org/doc/html/rfc2821#section-4.1.1">specification</a>.
+     */
+    public static String MULTILINE = "-";
 
     /**
      * Colon separator.
@@ -44,6 +59,12 @@ public class SmtpProtocolConstants {
      * See the <a href="https://datatracker.ietf.org/doc/html/rfc2821#section-3.3">specification</a>.
      */
     public static String DOT = ".";
+
+    /**
+     * Data dot-line separator.
+     * See the <a href="https://datatracker.ietf.org/doc/html/rfc2821#section-3.3">specification</a>.
+     */
+    public static byte[] DOT_BYTES = DOT.getBytes(StandardCharsets.US_ASCII);
 
     /**
      * Code of the first reply of the SMTP server.

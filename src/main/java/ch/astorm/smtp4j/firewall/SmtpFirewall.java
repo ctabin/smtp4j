@@ -36,7 +36,7 @@ public interface SmtpFirewall {
         return true;
     }
 
-    default boolean isAllowedMessage(String message) {
+    default boolean isAllowedMessage(byte[] message) {
         return true;
     }
 }

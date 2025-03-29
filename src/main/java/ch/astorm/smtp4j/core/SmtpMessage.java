@@ -32,7 +32,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -45,7 +44,7 @@ public class SmtpMessage {
     private final String sourceFrom;
     private final List<String> sourceRecipients;
     private final MimeMessage mimeMessage;
-    private final String rawMimeContent;
+    private final byte[] rawMimeContent;
     private final List<SmtpExchange> exchanges;
 
     /**
@@ -64,7 +63,7 @@ public class SmtpMessage {
      * @param rawMimeContent The raw MIME content of {@code mimeMessage}.
      * @param exchanges      The raw SMTP exchanges.
      */
-    public SmtpMessage(String from, List<String> recipients, MimeMessage mimeMessage, String rawMimeContent, List<SmtpExchange> exchanges) {
+    public SmtpMessage(String from, List<String> recipients, MimeMessage mimeMessage, byte[] rawMimeContent, List<SmtpExchange> exchanges) {
         this.sourceFrom = from;
         this.sourceRecipients = recipients;
         this.mimeMessage = mimeMessage;
@@ -267,26 +266,26 @@ public class SmtpMessage {
      *
      * @return The raw content.
      */
-    public String getRawMimeContent() {
+    public byte[] getRawMimeContent() {
         return rawMimeContent;
     }
 
     /**
      * Creates a new {@code SmtpMessage} with the specified parameters.
      *
-     * @param from           The source {@code From} parameter value.
-     * @param recipients     The source {@code Rcpt} parameter values.
-     * @param mimeMessageStr The {@code MimeMessage} content.
-     * @param exchanges      The raw SMTP exchanges of this message.
+     * @param from             The source {@code From} parameter value.
+     * @param recipients       The source {@code Rcpt} parameter values.
+     * @param mimeMessageBytes The {@code MimeMessage} content.
+     * @param exchanges        The raw SMTP exchanges of this message.
      * @return A new {@code SmtpMessage} instance.
      */
-    public static SmtpMessage create(String from, List<String> recipients, String mimeMessageStr, List<SmtpExchange> exchanges) {
+    public static SmtpMessage create(String from, List<String> recipients, byte[] mimeMessageBytes, List<SmtpExchange> exchanges) {
         MimeMessage mimeMessage;
-        try (InputStream is = new ByteArrayInputStream(mimeMessageStr.getBytes(StandardCharsets.UTF_8))) {
+        try (InputStream is = new ByteArrayInputStream(mimeMessageBytes)) {
             mimeMessage = new MimeMessage(SESSION, is);
         } catch (IOException | MessagingException e) {
             throw new RuntimeException("Unable to create MimeMessage from content", e);
         }
-        return new SmtpMessage(from, recipients, mimeMessage, mimeMessageStr, exchanges);
+        return new SmtpMessage(from, recipients, mimeMessage, mimeMessageBytes, exchanges);
     }
 }

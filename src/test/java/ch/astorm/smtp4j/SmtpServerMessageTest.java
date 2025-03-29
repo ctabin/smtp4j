@@ -26,6 +26,7 @@ import jakarta.mail.Multipart;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.InternetHeaders;
 import jakarta.mail.internet.MimeBodyPart;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
@@ -105,6 +106,37 @@ public class SmtpServerMessageTest {
             assertNotNull(e.getReceivedData());
             assertNotNull(e.getRepliedData());
         }
+    }
+
+    @Test
+    public void testMessageWithUTF8Body() throws Exception {
+        Session session = smtpServer.createSession();
+        MimeMessage msg = new MimeMessage(session);
+
+        msg.setFrom(new InternetAddress("testMessageWithUTF8Body@local.host"));
+        msg.addRecipient(RecipientType.TO, new InternetAddress("target1@local.host"));
+        msg.setSubject("Subject öäüÖÄÜ", StandardCharsets.UTF_8.name());
+        InternetHeaders partHeaders = new InternetHeaders();
+        partHeaders.addHeader("Content-Type", "text/plain; charset=UTF-8");
+        MimeMultipart mimeMultipart = new MimeMultipart();
+        MimeBodyPart body = new MimeBodyPart(
+                partHeaders,
+                "This is a test öäüÖÄÜ".getBytes(StandardCharsets.UTF_8)
+        );
+        mimeMultipart.addBodyPart(body);
+        msg.setContent(mimeMultipart);
+
+        Transport.send(msg);
+
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
+
+        SmtpMessage message = received.getFirst();
+        assertEquals("testMessageWithUTF8Body@local.host", message.getFrom());
+        assertEquals("testMessageWithUTF8Body@local.host", message.getSourceFrom());
+        assertEquals(List.of("target1@local.host"), message.getSourceRecipients());
+        assertEquals("Subject öäüÖÄÜ", message.getSubject());
+        assertEquals("This is a test öäüÖÄÜ", message.getBody());
     }
 
     @Test

@@ -26,13 +26,12 @@ import ch.astorm.smtp4j.firewall.SmtpFirewall;
 import ch.astorm.smtp4j.protocol.SmtpProtocolException;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
 import ch.astorm.smtp4j.util.CloseableReentrantLock;
+import ch.astorm.smtp4j.util.LineAwareBufferedInputStream;
 import ch.astorm.smtp4j.util.MaxMessageSizeInputStream;
 import jakarta.mail.Session;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
@@ -375,10 +374,10 @@ public class SmtpServer implements AutoCloseable {
 
         private void handleConnection(Socket socket) {
             try (socket;
-                 BufferedReader input = new BufferedReader(new InputStreamReader(
-                         firewall.firewallInputStream(wrapMaxMessageSizeStream(socket.getInputStream())),
-                         StandardCharsets.ISO_8859_1));
-                 PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1))) {
+                 LineAwareBufferedInputStream input = new LineAwareBufferedInputStream(
+                         firewall.firewallInputStream(
+                                 wrapMaxMessageSizeStream(socket.getInputStream())));
+                 PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.US_ASCII))) {
 
                 if (socketTimeout != null) {
                     try {
@@ -388,7 +387,7 @@ public class SmtpServer implements AutoCloseable {
                     }
                 }
 
-                SmtpTransactionHandler.handle(input, output, firewall, SmtpServer.this::notifyMessage);
+                SmtpTransactionHandler.handle(input, output, firewall, maxMessageSize, SmtpServer.this::notifyMessage);
             } catch (SmtpProtocolException spe) {
                 LOG.log(Level.WARNING, "Protocol Exception", spe);
             } catch (IOException ioe) {
