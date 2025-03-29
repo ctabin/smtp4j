@@ -49,7 +49,7 @@ public class SmtpLimitedServerMessageTest {
     @Test
     public void testSimpleMessage() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("source@smtp4j.local")
+                .from("SmtpLimitedServerMessageTest-testSimpleMessage1@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Test simple message 1")
                 .body("Test simple message 1");
@@ -62,7 +62,7 @@ public class SmtpLimitedServerMessageTest {
 
 
         messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("source@smtp4j.local")
+                .from("SmtpLimitedServerMessageTest-testSimpleMessage2@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Test simple message 2")
                 .body("Test simple message 2");
@@ -77,7 +77,7 @@ public class SmtpLimitedServerMessageTest {
     @Test
     public void testMessageLargeAttachment() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("source@smtp4j.local")
+                .from("SmtpLimitedServerMessageTest-testMessageLargeAttachment@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Message with multiple attachments")
                 .body("Message with multiple attachments");

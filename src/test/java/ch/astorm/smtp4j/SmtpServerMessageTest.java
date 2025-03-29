@@ -250,7 +250,7 @@ public class SmtpServerMessageTest {
     @Test
     public void testMessageWithMultipleAttachments() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
-        messageBuilder.from("source@smtp4j.local")
+        messageBuilder.from("testMessageWithMultipleAttachments@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Message with multiple attachments", StandardCharsets.UTF_8)
                 .body("There is your content", StandardCharsets.UTF_8);
@@ -342,7 +342,7 @@ public class SmtpServerMessageTest {
     @Test
     public void testMessageLargeAttachment() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("source@smtp4j.local")
+                .from("testMessageLargeAttachment@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Message with multiple attachments")
                 .body("Message with multiple attachments");
@@ -447,7 +447,7 @@ public class SmtpServerMessageTest {
     public void testSpecialMessageDataForDot() throws Exception {
         String text = "This méssage has multiple lines in SMTP and a dot.dot.dot.dot.dot.dot..dot.";
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("source@smtp4j.local")
+                .from("testSpecialMessageDataForDot@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Message with multiple attachments")
                 .body(text);

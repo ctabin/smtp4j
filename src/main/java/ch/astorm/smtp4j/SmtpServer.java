@@ -241,7 +241,7 @@ public class SmtpServer implements AutoCloseable {
                 if (serverSocket != null) {
                     port = DEFAULT_PORT;
                 } else {
-                    //generally, ports below 1024 are restricted to root
+                    //generally, ports below 1024 are restricted to root,
                     //so we directly start here to maximize chances to find an open port
                     int currentPort = 1024;
                     while (serverSocket == null && currentPort < 65536) {
@@ -257,7 +257,7 @@ public class SmtpServer implements AutoCloseable {
                     throw new IOException("Unable to start SMTP server (no free port found)");
                 }
             } else {
-                //creates manually the socket here, so in case of error we can have the
+                //manually creates the socket here, so in case of error we can have the
                 //source IOException raised
                 serverSocket = new ServerSocket(port);
             }
@@ -339,6 +339,15 @@ public class SmtpServer implements AutoCloseable {
             localServerSocket.close();
 
             serverThread.cancel(true);
+            while (!serverThread.isDone()) {
+                try {
+                    //noinspection BusyWait
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
             serverThread = null;
 
             notifyClosed();

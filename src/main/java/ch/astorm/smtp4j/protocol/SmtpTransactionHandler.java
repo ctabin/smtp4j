@@ -63,7 +63,7 @@ public class SmtpTransactionHandler {
      *
      * @param input           The input scanner.
      * @param output          The output writer.
-     * @param firewall
+     * @param firewall        The firewall.
      * @param messageReceiver The {@code MessageReceiver}.
      */
     public static void handle(BufferedReader input, PrintWriter output, SmtpFirewall firewall, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
@@ -102,10 +102,21 @@ public class SmtpTransactionHandler {
     private final List<SmtpExchange> exchanges = new ArrayList<>(32);
 
     private void readTransaction() throws SmtpProtocolException {
-        mainLoop:
+        boolean inForbiddenState = false;
+
         while (true) {
             SmtpCommand command = nextCommand();
             Type commandType = command.getType();
+
+            if (inForbiddenState) {
+                if (commandType == Type.QUIT) {
+                    reply(SmtpProtocolConstants.CODE_OK, "OK");
+                    break;
+                }
+
+                reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Subsequent commands forbidden");
+                continue;
+            }
 
             if (mailFrom == null) {
                 if (commandType == Type.MAIL_FROM) {
@@ -113,7 +124,7 @@ public class SmtpTransactionHandler {
                     mailFrom = enbraced.substring(1, enbraced.length() - 1);
                     if (!firewall.isAllowedFrom(mailFrom)) {
                         reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Mail-From forbidden");
-                        break;
+                        inForbiddenState = true;
                     } else {
                         reply(SmtpProtocolConstants.CODE_OK, "OK");
                     }
@@ -138,10 +149,11 @@ public class SmtpTransactionHandler {
                     String recipient = enbraced.substring(1, enbraced.length() - 1);
                     if (!firewall.isAllowedRecipient(recipient)) {
                         reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Recipient forbidden");
-                        break mainLoop;
+                        inForbiddenState = true;
+                    } else {
+                        recipients.add(recipient);
+                        reply(SmtpProtocolConstants.CODE_OK, "OK");
                     }
-                    recipients.add(recipient);
-                    reply(SmtpProtocolConstants.CODE_OK, "OK");
 
                     command = nextCommand();
                     commandType = command.getType();
@@ -166,7 +178,9 @@ public class SmtpTransactionHandler {
                         String messageContent = smtpMessageContent.toString();
                         if (!firewall.isAllowedMessage(messageContent)) {
                             reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Message forbidden");
-                            break mainLoop;
+                            inForbiddenState = true;
+                            hasFailure = true;
+                            break;
                         }
                         SmtpMessage message = SmtpMessage.create(mailFrom, recipients, messageContent, new ArrayList<>(exchanges));
                         try {

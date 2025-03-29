@@ -27,9 +27,11 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.net.InetAddress;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SmtpFirewalledServerMessageTest {
     private static SmtpServer smtpServer;
@@ -119,7 +121,7 @@ public class SmtpFirewalledServerMessageTest {
     public void testAcceptRemote() throws Exception {
         firewall.setAcceptRemote(false);
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("source@smtp4j.local")
+                .from("testAcceptRemote@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Test simple message 1")
                 .body("Test simple message 1");
@@ -132,38 +134,53 @@ public class SmtpFirewalledServerMessageTest {
     public void testAcceptFrom() throws Exception {
         firewall.setAcceptFrom(false);
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("source@smtp4j.local")
+                .from("testAcceptFrom@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Test simple message 1")
                 .body("Test simple message 1");
 
-        String message = assertThrows(MessagingException.class, messageBuilder::send).getMessage();
-        assertTrue(message.contains("403 Mail-From forbidden"));
+        try {
+            messageBuilder.send();
+            fail("Should not be able to send message");
+        } catch (MessagingException e) {
+            String message = e.getMessage().trim();
+            assertEquals("403 Mail-From forbidden", message);
+        }
     }
 
     @Test
     public void testAcceptRecipient() throws Exception {
         firewall.setAcceptRecipient(false);
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("source@smtp4j.local")
+                .from("testAcceptRecipient@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Test simple message 1")
                 .body("Test simple message 1");
 
-        String message = assertThrows(MessagingException.class, messageBuilder::send).getMessage();
-        assertNotNull(message);
+        try {
+            messageBuilder.send();
+            fail("Should not be able to send message");
+        } catch (MessagingException e) {
+            String message = e.getCause().getMessage().trim();
+            assertEquals("403 Recipient forbidden", message);
+        }
     }
 
     @Test
     public void testAcceptMessage() throws Exception {
         firewall.setAcceptMessage(false);
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("source@smtp4j.local")
+                .from("testAcceptMessage@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Test simple message 1")
                 .body("Test simple message 1");
 
-        String message = assertThrows(MessagingException.class, messageBuilder::send).getMessage();
-        assertNotNull(message);
+        try {
+            messageBuilder.send();
+            fail("Should not be able to send message");
+        } catch (MessagingException e) {
+            String message = e.getMessage().trim();
+            assertEquals("403 Message forbidden", message);
+        }
     }
 }
