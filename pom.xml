@@ -15,13 +15,12 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>at.datenwort.commons</groupId>
     <artifactId>smtp4j</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>smtp4j</name>
     <description>Simple SMTP Server</description>
     <url>https://github.com/imario42/smtp4j</url>
@@ -42,7 +41,7 @@
         <connection>scm:git:git://github.com/imario42/smtp4j.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/imario42/smtp4j.git</developerConnection>
         <url>http://github.com/imario42/smtp4j/tree/master</url>
-        <tag>HEAD</tag>
+        <tag>smtp4j-1.0.0</tag>
     </scm>
 
     <properties>
@@ -129,7 +128,7 @@
                                 <requireJavaVersion>
                                     <version>[24,)</version>
                                 </requireJavaVersion>
-                                <banDuplicatePomDependencyVersions/>
+                                <banDuplicatePomDependencyVersions />
 
                                 <!-- Do not activate this, otherwise it won't be possible to compile
                                      only submodules. -->
