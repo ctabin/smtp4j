@@ -19,7 +19,6 @@ package ch.astorm.smtp4j;
 import ch.astorm.smtp4j.core.SmtpAttachment;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.protocol.SmtpExchange;
-import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import jakarta.activation.DataHandler;
 import jakarta.mail.Message.RecipientType;
 import jakarta.mail.Multipart;
@@ -50,6 +49,7 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -73,7 +73,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testSimpleMessage() throws Exception {
-        Session session = smtpServer.createSession();
+        Session session = smtpServer.createSession(false);
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("from@local.host"));
@@ -88,6 +88,7 @@ public class SmtpServerMessageTest {
 
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
+        assertFalse(received.getFirst().isSecure());
 
         SmtpMessage message = received.getFirst();
         assertEquals("from@local.host", message.getFrom());
@@ -110,7 +111,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testMessageWithUTF8Body() throws Exception {
-        Session session = smtpServer.createSession();
+        Session session = smtpServer.createSession(false);
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("testMessageWithUTF8Body@local.host"));
@@ -223,7 +224,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testMessageWithAttachment() throws Exception {
-        Session session = smtpServer.createSession();
+        Session session = smtpServer.createSession(false);
         MimeMessage msg = new MimeMessage(session);
 
         Date sentDate = new SimpleDateFormat("dd.MM.yyyy HH:mm").parse("31.12.2020 23:59");
@@ -393,7 +394,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testMessageMultipartWithoutBody() throws Exception {
-        Session session = smtpServer.createSession();
+        Session session = smtpServer.createSession(false);
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("info@smtp4j.local"));
@@ -440,7 +441,7 @@ public class SmtpServerMessageTest {
 
     @Test
     public void testMessageMultipartWithMultipleBody() throws Exception {
-        Session session = smtpServer.createSession();
+        Session session = smtpServer.createSession(false);
         MimeMessage msg = new MimeMessage(session);
 
         msg.setFrom(new InternetAddress("info@smtp4j.local"));

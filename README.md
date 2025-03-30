@@ -17,8 +17,15 @@ with the following improvements:
 - Use ExecutorService instead of ThreadFactory
     - This gives us Virtual Threads support
 - Use ExecutorService for handling new connections
+    - ```SmtpServerBuilder.withExecutorService```
 - Message size limitation
+    - ```SmtpServerBuilder.withMaxMessageSize```
 - Remote IP restriction (via SmtpFirewall)
+    - ```SmtpServerBuilder.withFirewall```
+- Authentication (PLAIN, CRAM-MD5)
+    - ```SmtpServerBuilder.withAuth```
+- STARTTLS
+    - ```SmtpServerBuilder.withSecure```
 
 Here is the compatibility map of this API:
 

@@ -14,9 +14,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-package ch.astorm.smtp4j.util;
+package ch.astorm.smtp4j;
 
-import ch.astorm.smtp4j.SmtpServer;
 import jakarta.activation.DataHandler;
 import jakarta.activation.FileDataSource;
 import jakarta.mail.Address;
@@ -56,10 +55,22 @@ public class MimeMessageBuilder {
      * from the given {@code server}.
      *
      * @param server The server.
-     * @see SmtpServer#createSession()
+     * @see SmtpServer#createSession(boolean)
      */
     public MimeMessageBuilder(SmtpServer server) {
-        this(server.createSession());
+        this(server, false);
+    }
+
+    /**
+     * Constructs a new {@code MimeMessageBuilder} by creating a new {@code Session}
+     * from the given {@code SmtpServer} and specifying whether to trust all certificates.
+     *
+     * @param server        The {@code SmtpServer} used to create the session.
+     * @param trustEveryone If {@code true}, all certificates are trusted;
+     *                      if {@code false}, certificates are validated.
+     */
+    public MimeMessageBuilder(SmtpServer server, boolean trustEveryone) {
+        this(server.createSession(trustEveryone));
     }
 
     /**

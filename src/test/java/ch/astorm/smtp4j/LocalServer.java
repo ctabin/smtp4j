@@ -16,7 +16,6 @@
 
 package ch.astorm.smtp4j;
 
-import ch.astorm.smtp4j.auth.SmtpAuth;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import jakarta.mail.Address;
@@ -24,8 +23,11 @@ import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -36,10 +38,21 @@ public class LocalServer {
         try (var server = new SmtpServerBuilder()
                 .withMaxMessageSize(1024 * 1024)
                 .withPort(2525)
-                .withAuth(new SmtpAuth() {
-                    @Override
-                    public byte[] getPasswordForUser(String user) {
-                        return "dummy".getBytes(StandardCharsets.UTF_8);
+                .withAuth(user -> "dummy".getBytes(StandardCharsets.UTF_8))
+                .withSecure(() -> {
+                    try {
+                        KeyStore keyStore = KeyStore.getInstance("JKS");
+                        keyStore.load(LocalServer.class.getResourceAsStream("/smtpserver.jks"), "changeit".toCharArray());
+
+                        // Initialize the SSL context with the keystore
+                        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                        keyManagerFactory.init(keyStore, "changeit".toCharArray());
+
+                        SSLContext sslContext = SSLContext.getInstance("TLS");
+                        sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+                        return sslContext;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
                 })
                 .withMessageHandler(new SmtpMessageHandler() {

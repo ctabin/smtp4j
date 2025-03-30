@@ -17,25 +17,41 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpMessage;
-import jakarta.mail.MessagingException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import java.security.KeyStore;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class SmtpAuthServerMessageTest {
+public class SmtpTLSServerMessageTest {
     private static SmtpServer smtpServer;
 
     @BeforeAll
     public static void init() throws Exception {
         smtpServer = new SmtpServerBuilder()
                 .withPort(1025)
-                .withAuth(user -> (user + "-password").getBytes(StandardCharsets.UTF_8))
+                .withSecure(() -> {
+                    try {
+                        KeyStore keyStore = KeyStore.getInstance("JKS");
+                        keyStore.load(LocalServer.class.getResourceAsStream("/smtpserver.jks"), "changeit".toCharArray());
+
+                        // Initialize the SSL context with the keystore
+                        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                        keyManagerFactory.init(keyStore, "changeit".toCharArray());
+
+                        SSLContext sslContext = SSLContext.getInstance("TLS");
+                        sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+                        return sslContext;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
                 .start();
     }
 
@@ -45,41 +61,17 @@ public class SmtpAuthServerMessageTest {
     }
 
     @Test
-    public void testNoAuth() throws Exception {
-        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("testNoAuth@smtp4j.local")
+    public void testSend() throws Exception {
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer, true)
+                .from("testSend@smtp4j.local")
                 .to("target@smtp4j.local")
                 .subject("Test simple message 1")
                 .body("Test simple message 1");
 
-        String message = assertThrows(MessagingException.class, messageBuilder::send).getMessage().trim();
-        assertEquals("550 Authentication required", message);
-    }
-
-
-    @Test
-    public void testWrongAuth() throws Exception {
-        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("testWrongAuth@smtp4j.local")
-                .to("target@smtp4j.local")
-                .subject("Test simple message 1")
-                .body("Test simple message 1");
-
-        String message = assertThrows(MessagingException.class, () -> messageBuilder.send("test", "wrong-password")).getMessage().trim();
-        assertEquals("535 Authentication failed", message);
-    }
-
-    @Test
-    public void testCorrectAuth() throws Exception {
-        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
-                .from("testCorrectAuth@smtp4j.local")
-                .to("target@smtp4j.local")
-                .subject("Test simple message 1")
-                .body("Test simple message 1");
-
-        messageBuilder.send("test", "test-password");
+        messageBuilder.send();
 
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
         assertEquals(1, received.size());
+        assertTrue(received.getFirst().isSecure());
     }
 }

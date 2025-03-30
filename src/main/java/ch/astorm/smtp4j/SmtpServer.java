@@ -26,11 +26,16 @@ import ch.astorm.smtp4j.firewall.AllowAllSmtpFirewall;
 import ch.astorm.smtp4j.firewall.SmtpFirewall;
 import ch.astorm.smtp4j.protocol.SmtpProtocolException;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
+import ch.astorm.smtp4j.secure.SmtpSecure;
 import ch.astorm.smtp4j.util.CloseableReentrantLock;
 import ch.astorm.smtp4j.util.LineAwareBufferedInputStream;
 import ch.astorm.smtp4j.util.MaxMessageSizeInputStream;
 import jakarta.mail.Session;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
@@ -39,6 +44,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +75,7 @@ public class SmtpServer implements AutoCloseable {
     private final Long maxMessageSize;
     private final SmtpFirewall firewall;
     private final SmtpAuth auth;
+    private final SmtpSecure secure;
 
     private volatile ServerSocket serverSocket;
     private Future<?> serverThread;
@@ -88,7 +97,7 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      */
     public SmtpServer(int port) {
-        this(port, null, null, null, null, AllowAllSmtpFirewall.INSTANCE, null);
+        this(port, null, null, null, null, AllowAllSmtpFirewall.INSTANCE, null, null);
     }
 
     /**
@@ -106,8 +115,9 @@ public class SmtpServer implements AutoCloseable {
      * @param maxMessageSize  The maximum message size before the handler closes the connection
      * @param firewall
      * @param auth
+     * @param secure
      */
-    public SmtpServer(int port, SmtpMessageHandler messageHandler, ExecutorService executorService, Duration socketTimeout, Long maxMessageSize, SmtpFirewall firewall, SmtpAuth auth) {
+    public SmtpServer(int port, SmtpMessageHandler messageHandler, ExecutorService executorService, Duration socketTimeout, Long maxMessageSize, SmtpFirewall firewall, SmtpAuth auth, SmtpSecure secure) {
         this.port = port;
         this.messageHandler = messageHandler != null ? messageHandler : new DefaultSmtpMessageHandler();
         this.executorService = executorService != null ? executorService : Executors.newWorkStealingPool();
@@ -116,6 +126,7 @@ public class SmtpServer implements AutoCloseable {
         this.maxMessageSize = maxMessageSize;
         this.firewall = firewall;
         this.auth = auth;
+        this.secure = secure;
     }
 
     /**
@@ -126,6 +137,24 @@ public class SmtpServer implements AutoCloseable {
      * @return The properties for this server.
      */
     public Properties getSessionProperties() {
+        return getSessionProperties(false);
+    }
+
+    /**
+     * Returns the basic {@code Properties} that can be used for configuring a mail session.
+     * If the port is dynamic, then the server must have been started before this method
+     * can be called. It optionally allows trusting all certificates when using a secure
+     * connection.
+     *
+     * @param trustEveryone When set to true, configures the session to trust all server
+     *                      certificates and disable hostname verification. Useful for
+     *                      development or testing environments.
+     * @return The properties for this server, including host, port, and optional secure
+     * connection configuration.
+     * @throws IllegalStateException If the server port is dynamic and the server has not
+     *                               been started when the method is called.
+     */
+    public Properties getSessionProperties(boolean trustEveryone) {
         if (port <= 0) {
             throw new IllegalStateException("Dynamic port lookup: server must be started");
         }
@@ -133,6 +162,40 @@ public class SmtpServer implements AutoCloseable {
         Properties props = new Properties();
         props.setProperty("mail.smtp.host", "localhost");
         props.setProperty("mail.smtp.port", "" + port);
+        if (secure != null) {
+            props.put("mail.smtp.starttls.enable", true);
+            props.put("mail.smtp.starttls.required", true);
+
+            SSLContext context = secure.getSSLContext();
+            if (trustEveryone) {
+                TrustManager[] trustAllCerts = new TrustManager[]{
+                        new X509TrustManager() {
+                            @Override
+                            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                                return null;
+                            }
+
+                            @Override
+                            public void checkClientTrusted(
+                                    java.security.cert.X509Certificate[] certs, String authType) {
+                            }
+
+                            @Override
+                            public void checkServerTrusted(
+                                    java.security.cert.X509Certificate[] certs, String authType) {
+                            }
+                        }};
+                try {
+                    context.init(null, trustAllCerts, SecureRandom.getInstanceStrong());
+                } catch (KeyManagementException | NoSuchAlgorithmException e) {
+                    throw new RuntimeException(e);
+                }
+                props.put("mail.smtp.ssl.checkserveridentity", false);
+            }
+
+            SSLSocketFactory sslSocketFactory = context.getSocketFactory();
+            props.put("mail.smtp.ssl.socketFactory", sslSocketFactory);
+        }
         return props;
     }
 
@@ -141,8 +204,8 @@ public class SmtpServer implements AutoCloseable {
      *
      * @return A new {@code Session} instance.
      */
-    public Session createSession() {
-        return Session.getInstance(getSessionProperties());
+    public Session createSession(boolean trustEveryone) {
+        return Session.getInstance(getSessionProperties(trustEveryone));
     }
 
     /**
@@ -357,6 +420,42 @@ public class SmtpServer implements AutoCloseable {
         }
     }
 
+    public void handleConnectionAsync(Socket socket, boolean isSecure) {
+        executorService.submit(() -> handleConnection(socket, isSecure));
+    }
+
+    public void handleConnection(Socket socket, boolean isSecure) {
+        try (socket;
+             LineAwareBufferedInputStream input = new LineAwareBufferedInputStream(
+                     firewall.firewallInputStream(
+                             wrapMaxMessageSizeStream(socket.getInputStream())));
+             PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.US_ASCII))) {
+
+            if (socketTimeout != null) {
+                try {
+                    socket.setSoTimeout((int) socketTimeout.toMillis());
+                } catch (SocketException e) {
+                    LOG.log(Level.SEVERE, "Could not set socket timeout", e);
+                }
+            }
+
+            SmtpTransactionHandler.handle(SmtpServer.this, socket, isSecure, input, output, firewall, maxMessageSize, auth, secure, SmtpServer.this::notifyMessage);
+        } catch (SmtpProtocolException spe) {
+            LOG.log(Level.WARNING, "Protocol Exception", spe);
+        } catch (IOException ioe) {
+            /* can be generally safely ignored because occurs when the server is being closed */
+            LOG.log(Level.FINER, "I/O Exception", ioe);
+        }
+    }
+
+    private InputStream wrapMaxMessageSizeStream(InputStream inputStream) {
+        if (maxMessageSize == null) {
+            return inputStream;
+        }
+
+        return new MaxMessageSizeInputStream(maxMessageSize, inputStream);
+    }
+
     private class SmtpPacketListener implements Runnable {
         @Override
         public void run() {
@@ -368,44 +467,12 @@ public class SmtpServer implements AutoCloseable {
                     }
 
                     LOG.log(Level.FINER, "Got connection from " + socket.getRemoteSocketAddress());
-                    executorService.submit(() -> handleConnection(socket));
+                    handleConnectionAsync(socket, false);
                 } catch (IOException e) {
                     /* can be generally safely ignored because occurs when the server is being closed */
                     LOG.log(Level.FINER, "I/O Exception", e);
                 }
             }
-        }
-
-        private void handleConnection(Socket socket) {
-            try (socket;
-                 LineAwareBufferedInputStream input = new LineAwareBufferedInputStream(
-                         firewall.firewallInputStream(
-                                 wrapMaxMessageSizeStream(socket.getInputStream())));
-                 PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.US_ASCII))) {
-
-                if (socketTimeout != null) {
-                    try {
-                        socket.setSoTimeout((int) socketTimeout.toMillis());
-                    } catch (SocketException e) {
-                        LOG.log(Level.SEVERE, "Could not set socket timeout", e);
-                    }
-                }
-
-                SmtpTransactionHandler.handle(input, output, firewall, maxMessageSize, auth, SmtpServer.this::notifyMessage);
-            } catch (SmtpProtocolException spe) {
-                LOG.log(Level.WARNING, "Protocol Exception", spe);
-            } catch (IOException ioe) {
-                /* can be generally safely ignored because occurs when the server is being closed */
-                LOG.log(Level.FINER, "I/O Exception", ioe);
-            }
-        }
-
-        private InputStream wrapMaxMessageSizeStream(InputStream inputStream) {
-            if (maxMessageSize == null) {
-                return inputStream;
-            }
-
-            return new MaxMessageSizeInputStream(maxMessageSize, inputStream);
         }
     }
 }

@@ -41,6 +41,7 @@ import java.util.Properties;
  * Represents an SMTP message.
  */
 public class SmtpMessage {
+    private final boolean isSecure;
     private final String sourceFrom;
     private final List<String> sourceRecipients;
     private final MimeMessage mimeMessage;
@@ -57,18 +58,29 @@ public class SmtpMessage {
     /**
      * Creates a new {@code SmtpMessage} with the specified parameters.
      *
+     * @param isSecure       "true" if the message has been received using TLS.
      * @param from           The source {@code From} parameter value.
      * @param recipients     The source {@code Rcpt} parameter values.
      * @param mimeMessage    The parsed {@code MimeMessage}.
      * @param rawMimeContent The raw MIME content of {@code mimeMessage}.
      * @param exchanges      The raw SMTP exchanges.
      */
-    public SmtpMessage(String from, List<String> recipients, MimeMessage mimeMessage, byte[] rawMimeContent, List<SmtpExchange> exchanges) {
+    public SmtpMessage(boolean isSecure, String from, List<String> recipients, MimeMessage mimeMessage, byte[] rawMimeContent, List<SmtpExchange> exchanges) {
+        this.isSecure = isSecure;
         this.sourceFrom = from;
         this.sourceRecipients = recipients;
         this.mimeMessage = mimeMessage;
         this.rawMimeContent = rawMimeContent;
         this.exchanges = exchanges;
+    }
+
+    /**
+     * Indicates whether the message was received using a secure TLS connection.
+     *
+     * @return true if the message was received using TLS, false otherwise.
+     */
+    public boolean isSecure() {
+        return isSecure;
     }
 
     /**
@@ -273,19 +285,20 @@ public class SmtpMessage {
     /**
      * Creates a new {@code SmtpMessage} with the specified parameters.
      *
+     * @param isSecure         "true" if the message has been received using TLS.
      * @param from             The source {@code From} parameter value.
      * @param recipients       The source {@code Rcpt} parameter values.
      * @param mimeMessageBytes The {@code MimeMessage} content.
      * @param exchanges        The raw SMTP exchanges of this message.
      * @return A new {@code SmtpMessage} instance.
      */
-    public static SmtpMessage create(String from, List<String> recipients, byte[] mimeMessageBytes, List<SmtpExchange> exchanges) {
+    public static SmtpMessage create(boolean isSecure, String from, List<String> recipients, byte[] mimeMessageBytes, List<SmtpExchange> exchanges) {
         MimeMessage mimeMessage;
         try (InputStream is = new ByteArrayInputStream(mimeMessageBytes)) {
             mimeMessage = new MimeMessage(SESSION, is);
         } catch (IOException | MessagingException e) {
             throw new RuntimeException("Unable to create MimeMessage from content", e);
         }
-        return new SmtpMessage(from, recipients, mimeMessage, mimeMessageBytes, exchanges);
+        return new SmtpMessage(isSecure, from, recipients, mimeMessage, mimeMessageBytes, exchanges);
     }
 }

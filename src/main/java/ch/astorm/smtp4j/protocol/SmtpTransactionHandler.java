@@ -16,17 +16,23 @@
 
 package ch.astorm.smtp4j.protocol;
 
+import ch.astorm.smtp4j.SmtpServer;
 import ch.astorm.smtp4j.auth.SmtpAuth;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.firewall.SmtpFirewall;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
+import ch.astorm.smtp4j.secure.SmtpSecure;
 import ch.astorm.smtp4j.util.ByteArrayUtils;
 import ch.astorm.smtp4j.util.LineAwareBufferedInputStream;
 import ch.astorm.smtp4j.util.StringUtils;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -49,11 +55,15 @@ public class SmtpTransactionHandler {
         }
     }
 
+    private final SmtpServer smtpServer;
+    private final Socket socket;
+    private final boolean isSecure;
     private final LineAwareBufferedInputStream input;
     private final PrintWriter output;
     private final MessageReceiver messageReceiver;
     private final SmtpFirewall firewall;
     private final SmtpAuth auth;
+    private final SmtpSecure secure;
     private final Long maxMessageSize;
 
     /**
@@ -72,56 +82,72 @@ public class SmtpTransactionHandler {
         void receiveMessage(SmtpMessage message);
     }
 
-    private SmtpTransactionHandler(LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, SmtpAuth auth, Long maxMessageSize, MessageReceiver messageReceiver) {
+    private SmtpTransactionHandler(SmtpServer smtpServer, Socket socket, boolean isSecure, LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, SmtpAuth auth, SmtpSecure secure, Long maxMessageSize, MessageReceiver messageReceiver) {
+        this.smtpServer = smtpServer;
+        this.socket = socket;
+        this.isSecure = isSecure;
         this.input = input;
         this.output = output;
         this.firewall = firewall;
         this.auth = auth;
+        this.secure = secure;
         this.messageReceiver = messageReceiver;
         this.maxMessageSize = maxMessageSize;
     }
 
+
     /**
-     * Handles the SMTP protocol communication.
+     * Handles an SMTP transaction by initializing and executing the SmtpTransactionHandler
+     * with the provided parameters.
      *
-     * @param input           The input scanner.
-     * @param output          The output writer.
-     * @param firewall        The firewall.
-     * @param maxMessageSize
-     * @param auth
-     * @param messageReceiver The {@code MessageReceiver}.
+     * @param smtpServer      the SMTP server instance managing the transaction
+     * @param socket          the socket connection used for communication
+     * @param isSecure        a boolean indicating whether the connection is secure
+     * @param input           the input stream to read data from the client
+     * @param output          the writer to send data to the client
+     * @param firewall        the SMTP firewall for managing restrictions and rules
+     * @param maxMessageSize  the maximum allowed size for the email message
+     * @param auth            the SMTP authentication handler
+     * @param secure          the SMTP secure connection handler
+     * @param messageReceiver the object responsible for processing received emails
+     * @throws IOException           if an I/O error occurs while handling the transaction
+     * @throws SmtpProtocolException if there is an error in SMTP protocol handling
      */
-    public static void handle(LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, Long maxMessageSize, SmtpAuth auth, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
-        SmtpTransactionHandler sth = new SmtpTransactionHandler(input, output, firewall, auth, maxMessageSize, messageReceiver);
+    public static void handle(SmtpServer smtpServer, Socket socket, boolean isSecure, LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, Long maxMessageSize, SmtpAuth auth, SmtpSecure secure, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
+        SmtpTransactionHandler sth = new SmtpTransactionHandler(smtpServer, socket, isSecure, input, output, firewall, auth, secure, maxMessageSize, messageReceiver);
         sth.execute();
     }
 
     private void execute() throws SmtpProtocolException {
-        //inform the client about the SMTP server state
-        reply(SmtpProtocolConstants.CODE_CONNECT, "localhost smtp4j server ready");
+        // "server ready" message isn't required if we just started TLS
+        if (!isSecure) {
+            //inform the client about the SMTP server state
+            reply(SmtpProtocolConstants.CODE_CONNECT, "localhost smtp4j server ready");
+        }
 
         //extends the EHLO/HELO command to greet the client
         SmtpCommand ehlo = SmtpCommand.parse(nextLine());
-        if (ehlo != null) {
-            if (ehlo.getType() == Type.EHLO) {
-                String param = ehlo.getParameter();
-                if (param == null || param.trim().isEmpty()) {
-                    param = "you";
-                }
-                reply(SmtpProtocolConstants.CODE_OK, Stream.of(
-                                "smtp4j greets " + param,
-                                Type.EIGHT_BIT_MIME.withArgs(null),
-                                auth != null ? Type.AUTH.withArgs("CRAM-MD5 PLAIN") : "",
-                                Type.SIZE.withArgs(maxMessageSize != null ? maxMessageSize.toString() : ""))
-                        .filter(s -> !s.isEmpty())
-                        .toList()
-                );
-            } else {
-                reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
-                return;
+        if (ehlo == null) {
+            return;
+        }
+
+        if (ehlo.getType() == Type.EHLO) {
+            String param = ehlo.getParameter();
+            if (param == null || param.trim().isEmpty()) {
+                param = "you";
             }
+            reply(SmtpProtocolConstants.CODE_OK, Stream.of(
+                            "smtp4j greets " + param,
+                            Type.EIGHT_BIT_MIME.withArgs(null),
+                            auth != null ? Type.AUTH.withArgs("PLAIN CRAM-MD5") : "",
+                            (!isSecure && secure != null) ? Type.STARTTLS.withArgs(null) : "",
+                            (!isSecure && secure != null) ? "REQUIRETLS" : "",
+                            Type.SIZE.withArgs(maxMessageSize != null ? maxMessageSize.toString() : ""))
+                    .filter(s -> !s.isEmpty())
+                    .toList()
+            );
         } else {
-            reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (no more token)");
+            reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
             return;
         }
 
@@ -137,9 +163,11 @@ public class SmtpTransactionHandler {
     private final List<SmtpExchange> exchanges = new ArrayList<>(32);
 
     private void readTransaction() throws SmtpProtocolException {
-        boolean inForbiddenState = false;
 
+        boolean inForbiddenState = false;
         boolean isAuthenticated = auth == null;
+        boolean expectedSecurityLevelEstablished = isSecure || secure == null;
+
         int authTries = 0;
         String currentAuthOngoing = null;
         String currentAuthChallenge = null;
@@ -172,10 +200,50 @@ public class SmtpTransactionHandler {
             }
 
             SmtpCommand command = nextCommand();
+            if (command == null) {
+                return;
+            }
+
             Type commandType = command.getType();
 
             if (inForbiddenState) {
                 reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Subsequent commands forbidden");
+                continue;
+            }
+
+            if (commandType == Type.STARTTLS) {
+                if (secure == null) {
+                    reply(SmtpProtocolConstants.CODE_TRANSACTION_FAILED, "TLS not supported");
+                    break;
+                }
+
+                // Upgrade to TLS
+                SSLSocket sslSocket;
+                try {
+                    SSLContext sslContext = secure.getSSLContext();
+                    SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+                    sslSocket = (SSLSocket) sslSocketFactory.createSocket(
+                            socket,
+                            socket.getInetAddress().getHostAddress(),
+                            socket.getPort(),
+                            true
+                    );
+                    sslSocket.setUseClientMode(false);
+                } catch (Exception e) {
+                    reply(SmtpProtocolConstants.CODE_TRANSACTION_FAILED, "TLS Upgrade failed");
+                    throw new SmtpProtocolException("TLS Upgrade failed", e);
+                }
+
+                // notify client
+                reply(SmtpProtocolConstants.CODE_CONNECT, "Ready to start TLS");
+
+                smtpServer.handleConnection(sslSocket, true);
+                // we are done here
+                return;
+            }
+
+            if (!expectedSecurityLevelEstablished) {
+                reply(SmtpProtocolConstants.CODE_AUTH_REQUIRED, Type.STARTTLS.withArgs(null) + " required");
                 continue;
             }
 
@@ -311,7 +379,7 @@ public class SmtpTransactionHandler {
                             hasFailure = true;
                             break;
                         }
-                        SmtpMessage message = SmtpMessage.create(mailFrom, recipients, messageContent, new ArrayList<>(exchanges));
+                        SmtpMessage message = SmtpMessage.create(isSecure, mailFrom, recipients, messageContent, new ArrayList<>(exchanges));
                         try {
                             messageReceiver.receiveMessage(message);
                             resetState();
@@ -359,17 +427,25 @@ public class SmtpTransactionHandler {
         try {
             byte[] line = input.readLine();
             if (line == null) {
-                throw new SmtpProtocolException("Unexpected end of stream (no more line)");
+                return null;
             }
             readData.add(line);
             return line;
         } catch (IOException ioe) {
+            if (socket.isClosed()) {
+                return null;
+            }
+
             throw new SmtpProtocolException("I/O exception", ioe);
         }
     }
 
     private SmtpCommand nextCommand() throws SmtpProtocolException {
         SmtpCommand command = SmtpCommand.parse(nextLine());
+        if (command == null) {
+            return null;
+        }
+
         while (command != null) {
             Type commandType = command.getType();
             if (commandType == Type.NOOP) {

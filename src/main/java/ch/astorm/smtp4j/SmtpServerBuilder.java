@@ -21,6 +21,7 @@ import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
 import ch.astorm.smtp4j.firewall.AllowAllSmtpFirewall;
 import ch.astorm.smtp4j.firewall.SmtpFirewall;
+import ch.astorm.smtp4j.secure.SmtpSecure;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -40,6 +41,7 @@ public class SmtpServerBuilder {
     private Long maxMessageSize;
     private SmtpFirewall firewall = AllowAllSmtpFirewall.INSTANCE;
     private SmtpAuth auth;
+    private SmtpSecure secure;
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
@@ -59,7 +61,7 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, SmtpMessageHandler, ExecutorService, Duration, Long, SmtpFirewall, SmtpAuth)
+     * @see SmtpServer#SmtpServer(int, SmtpMessageHandler, ExecutorService, Duration, Long, SmtpFirewall, SmtpAuth, SmtpSecure)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
@@ -137,12 +139,23 @@ public class SmtpServerBuilder {
     }
 
     /**
+     * Configures the SMTP server to use the specified security settings.
+     *
+     * @param secure The security configuration to use for the server.
+     * @return This builder, to allow method chaining.
+     */
+    public SmtpServerBuilder withSecure(SmtpSecure secure) {
+        this.secure = secure;
+        return this;
+    }
+
+    /**
      * Builds the {@code SmtpServer}.
      *
      * @return A new {@code SmtpServer} instance.
      */
     public SmtpServer build() {
-        SmtpServer server = new SmtpServer(port, handler, executorService, socketTimeout, maxMessageSize, firewall, auth);
+        SmtpServer server = new SmtpServer(port, handler, executorService, socketTimeout, maxMessageSize, firewall, auth, secure);
         if (listeners != null) {
             listeners.forEach(server::addListener);
         }

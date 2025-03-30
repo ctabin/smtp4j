@@ -19,7 +19,6 @@ package ch.astorm.smtp4j;
 import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageReader;
-import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
