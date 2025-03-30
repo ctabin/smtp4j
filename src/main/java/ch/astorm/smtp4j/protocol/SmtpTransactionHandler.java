@@ -139,6 +139,7 @@ public class SmtpTransactionHandler {
     private void readTransaction() throws SmtpProtocolException {
         boolean inForbiddenState = false;
 
+        boolean isAuthenticated = auth == null;
         int authTries = 0;
         String currentAuthOngoing = null;
         String currentAuthChallenge = null;
@@ -148,7 +149,7 @@ public class SmtpTransactionHandler {
                 try {
                     String[] credentials = StringUtils.decode(nextLine()).split(" ", 2);
                     if (credentials.length != 2) {
-                        reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Auth failed");
+                        reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Authentication failed");
                         continue;
                     }
 
@@ -158,9 +159,10 @@ public class SmtpTransactionHandler {
                             StringUtils.hashWithHMACMD5(
                                     currentAuthChallenge,
                                     auth.getPasswordForUser(user)))) {
+                        isAuthenticated = true;
                         reply(SmtpProtocolConstants.CODE_AUTH_OK, "OK");
                     } else {
-                        reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Auth failed");
+                        reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Authentication failed");
                     }
                     continue;
                 } finally {
@@ -173,11 +175,6 @@ public class SmtpTransactionHandler {
             Type commandType = command.getType();
 
             if (inForbiddenState) {
-                if (commandType == Type.QUIT) {
-                    reply(SmtpProtocolConstants.CODE_OK, "OK");
-                    break;
-                }
-
                 reply(SmtpProtocolConstants.CODE_FORBIDDEN, "Subsequent commands forbidden");
                 continue;
             }
@@ -217,9 +214,10 @@ public class SmtpTransactionHandler {
                         String user = credentials[1];
                         String pass = credentials[2];
                         if (ByteArrayUtils.equals(pass.getBytes(StandardCharsets.UTF_8), auth.getPasswordForUser(user))) {
+                            isAuthenticated = true;
                             reply(SmtpProtocolConstants.CODE_AUTH_OK, "OK");
                         } else {
-                            reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Auth failed");
+                            reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Authentication failed");
                         }
                         break;
                     case "CRAM-MD5":
@@ -235,6 +233,16 @@ public class SmtpTransactionHandler {
                         break;
                 }
 
+                continue;
+            }
+
+            if (!isAuthenticated) {
+                if (commandType == Type.QUIT) {
+                    reply(SmtpProtocolConstants.CODE_OK, "OK");
+                    break;
+                }
+
+                reply(SmtpProtocolConstants.CODE_AUTH_REQUIRED, "Authentication required");
                 continue;
             }
 

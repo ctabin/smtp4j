@@ -123,6 +123,11 @@ public class SmtpProtocolConstants {
     public static final int CODE_AUTH_FAILED = 535;
 
     /**
+     * Error code when authentication is required.
+     */
+    public static final int CODE_AUTH_REQUIRED = 550;
+
+    /**
      * Error code when a transaction has failed.
      */
     public static final int CODE_TRANSACTION_FAILED = 554;
