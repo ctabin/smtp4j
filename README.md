@@ -388,8 +388,3 @@ SmtpServer server = builder.withMessageHandler(myCustomHandler).start()){
         //...
         }
 ```
-
-### Limitations
-
-For now, it is not possible to communicate securely (SMTPS or SSL/TLS) through this API. If the client
-tries to initiate a secure channel, the connection will be closed.
