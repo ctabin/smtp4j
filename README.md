@@ -338,10 +338,93 @@ try(SmtpServer server = builder.withMessageHandler(myCustomHandler).start()) {
 }
 ```
 
-### Limitations
+### STARTTLS
 
-For now, it is not possible to communicate securely (SMTPS or SSL/TLS) through this API. If the client
-tries to initiate a secure channel, the connection will be closed.
+The SMTP support the `STARTTLS` command once a client session is initiated. Also the API provides a self-signed
+certificate in order to simulate TLS effectively.
+
+```java
+try(SmtpServer smtpServer = new SmtpServerBuilder().
+    withStartTLSSupport(true).
+    withSSLContextProvider(DefaultSSLContextProvider.selfSigned()).
+    withPort(1025).
+    start()) {
+
+  //since STARTTLS is supported, the corresponding properties are also set to
+  //automatically switch over secure channel communication
+  MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
+                    from("source@smtp4j.local").
+                    to("target@smtp4j.local").
+                    subject("Subject").
+                    body("Message");
+  messageBuilder.send();
+}
+```
+
+When the `STARTTLS` support is enabled, the following SMTP properties are set when creating a new
+Session:
+
+| Property | Value |
+| -------- | ----- |
+| `mail.smtp.starttls.enable` | `true` |
+| `mail.smtp.starttls.required` | `true` |
+| `mail.smtp.ssl.checkserveridentity` | `false` |
+| `mail.smtp.ssl.trust` | `*` |
+
+### Debugging Internals
+
+It is very simple to enable debugging to see all the inputs/outputs of the underlying SMTP protocol.
+
+```java
+SmtpServer smtpServer = new SmtpServerBuilder().
+    withDebug(System.err).
+    withPort(1025).
+    start()
+```
+
+The output will be like this:
+
+```
+< 220 localhost smtp4j server ready
+> EHLO galactus
+< 250 smtp4j greets galactus
+> MAIL FROM:<source@smtp4j.local>
+< 250 OK
+> RCPT TO:<target@smtp4j.local>
+< 250 OK
+> DATA
+< 354 Start mail input; end with <CRLF>.<CRLF>
+> Date: Thu, 3 Apr 2025 23:43:02 +0200 (CEST)
+> From: source@smtp4j.local
+> To: target@smtp4j.local
+> Message-ID: <1428475041.1.1743716582473@galactus>
+> Subject: Subject
+> MIME-Version: 1.0
+> Content-Type: multipart/mixed;
+> boundary="----=_Part_0_238357312.1743716582458"
+> 
+> ------=_Part_0_238357312.1743716582458
+> Content-Type: text/plain; charset=us-ascii
+> Content-Transfer-Encoding: 7bit
+> 
+> Message
+> ------=_Part_0_238357312.1743716582458--
+> .
+< 250 OK
+> QUIT
+< 250 OK
+```
+
+### Developements & ideas
+
+Here are future developement ideas:
+- SMTPS support
+- Mailbox support
+- 8BITMIME command
+- PIPELINING command
+- AUTH support
+
+Contributions are welcomed !
 
 ## Donate
 

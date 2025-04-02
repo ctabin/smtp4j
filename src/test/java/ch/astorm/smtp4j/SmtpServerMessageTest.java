@@ -4,6 +4,7 @@ package ch.astorm.smtp4j;
 import ch.astorm.smtp4j.core.SmtpAttachment;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.protocol.SmtpExchange;
+import ch.astorm.smtp4j.secure.DefaultSSLContextProvider;
 import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import jakarta.activation.DataHandler;
 import jakarta.mail.Message.RecipientType;
@@ -25,12 +26,12 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.AfterAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,7 +46,12 @@ public class SmtpServerMessageTest {
     @BeforeAll
     public static void init() throws Exception {
         SmtpServerBuilder builder = new SmtpServerBuilder();
-        smtpServer = builder.withPort(1025).start();
+        smtpServer = builder.
+            withStartTLSSupport(false).
+            withSSLContextProvider(DefaultSSLContextProvider.selfSigned()).
+            withDebugStream(System.err).
+            withPort(1025).
+            start();
     }
 
     @AfterAll
@@ -438,5 +444,39 @@ public class SmtpServerMessageTest {
         SmtpMessage message = received.get(0);
         String body = message.getBody();
         assertEquals(text, body);
+    }
+    
+    @Test
+    public void testDisabledStartTLS() throws Exception {
+        Properties props = smtpServer.getSessionProperties();
+        props.put("mail.smtp.starttls.enable", "true");
+        
+        Session session = Session.getInstance(props);
+        
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(session).
+                from("source@smtp4j.local").
+                to("target@smtp4j.local").
+                subject("Subject").
+                body("Message");
+
+        messageBuilder.send();
+        assertEquals(1, smtpServer.readReceivedMessages().size());
+    }
+    
+    @Test
+    public void testEnabledStartTLS() throws Exception {
+        smtpServer.getOptions().starttls = true;
+        try {
+            MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
+                    from("source@smtp4j.local").
+                    to("target@smtp4j.local").
+                    subject("Subject").
+                    body("Message");
+
+            messageBuilder.send();
+            assertEquals(1, smtpServer.readReceivedMessages().size());
+        } finally {
+            smtpServer.getOptions().starttls = false;
+        }
     }
 }

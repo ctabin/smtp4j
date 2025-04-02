@@ -40,6 +40,7 @@ public class SmtpServer implements AutoCloseable {
     private final List<SmtpServerListener> listeners;
     private final ThreadFactory threadFactory;
     
+    private volatile SmtpServerOptions serverOptions;
     private volatile ServerSocket serverSocket;
     private Thread localThread;
 
@@ -81,8 +82,28 @@ public class SmtpServer implements AutoCloseable {
         this.messageHandlerLock = new ReentrantLock();
         this.threadFactory = threadFactory!=null ? threadFactory : Executors.defaultThreadFactory();
         this.listeners = new ArrayList<>(4);
+        this.serverOptions = new SmtpServerOptions();
     }
 
+    /**
+     * Returns the SMTP server options.
+     *
+     * @return The options.
+     */
+    public SmtpServerOptions getOptions() {
+        return serverOptions;
+    }
+    
+    /**
+     * Sets the SMTP options.
+     *
+     * @param options The options, cannot be null.
+     */
+    public void setOptions(SmtpServerOptions options) {
+        if(options==null) { throw new IllegalArgumentException("options not defined"); }
+        this.serverOptions = options;
+    }
+    
     /**
      * Returns the basic {@code Properties} that can be used for {@link Session}.
      * If the port is dynamic, then the server must have been started before this
@@ -96,6 +117,12 @@ public class SmtpServer implements AutoCloseable {
         Properties props = new Properties();
         props.setProperty("mail.smtp.host", "localhost");
         props.setProperty("mail.smtp.port", ""+port);
+        if(serverOptions.starttls) {
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.starttls.required", "true");
+            props.put("mail.smtp.ssl.checkserveridentity", "false");
+            props.put("mail.smtp.ssl.trust", "*");
+        }
         return props;
     }
     
@@ -307,12 +334,9 @@ public class SmtpServer implements AutoCloseable {
         @Override
         public void run() {
             while(serverSocket!=null) {
-                try(Socket socket = serverSocket.accept();
-                    BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1));
-                    PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1))) {
-                    
+                try(Socket socket = serverSocket.accept()) {
                     messageHandlerLock.lock();
-                    try { SmtpTransactionHandler.handle(input, output, m -> notifyMessage(m)); }
+                    try { SmtpTransactionHandler.handle(SmtpServer.this, socket, m -> notifyMessage(m)); }
                     finally { messageHandlerLock.unlock(); }
                 } catch(SmtpProtocolException spe) {
                     LOG.log(Level.WARNING, "Protocol Exception", spe);
