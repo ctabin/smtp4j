@@ -23,6 +23,7 @@ import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -35,6 +36,7 @@ public class SmtpServer implements AutoCloseable {
 
     private int port;
     private final SmtpMessageHandler messageHandler;
+    private final ReentrantLock messageHandlerLock;
     private final List<SmtpServerListener> listeners;
     private final ThreadFactory threadFactory;
     
@@ -76,6 +78,7 @@ public class SmtpServer implements AutoCloseable {
     public SmtpServer(int port, SmtpMessageHandler messageHandler, ThreadFactory threadFactory) {
         this.port = port;
         this.messageHandler = messageHandler!=null ? messageHandler : new DefaultSmtpMessageHandler();
+        this.messageHandlerLock = new ReentrantLock();
         this.threadFactory = threadFactory!=null ? threadFactory : Executors.defaultThreadFactory();
         this.listeners = new ArrayList<>(4);
     }
@@ -192,7 +195,7 @@ public class SmtpServer implements AutoCloseable {
      * Starts the server.
      * If the server is already started, this method will raise and {@code IllegalStateException}.
      */
-    public synchronized void start() throws IOException {
+    public void start() throws IOException {
         if(!isClosed()) { throw new IllegalStateException("Server already started"); }
 
         if(port<=0) {
@@ -222,7 +225,9 @@ public class SmtpServer implements AutoCloseable {
         localThread = threadFactory.newThread(new SmtpPacketListener());
         localThread.start();
 
-        notifyStarted();
+        messageHandlerLock.lock();
+        try { notifyStarted(); }
+        finally { messageHandlerLock.unlock(); }
     }
 
     private ServerSocket createSocketIfPossible(int port) {
@@ -280,7 +285,7 @@ public class SmtpServer implements AutoCloseable {
      * If the server is already closed, this method does nothing.
      */
     @Override
-    public synchronized void close() throws IOException {
+    public void close() throws IOException {
         if(isClosed()) { return; } //already closed
 
         ServerSocket localServerSocket = serverSocket;
@@ -293,7 +298,9 @@ public class SmtpServer implements AutoCloseable {
         catch(InterruptedException ie) { /* ignored */ }
         localThread = null;
 
-        notifyClosed();
+        messageHandlerLock.lock();
+        try { notifyClosed(); }
+        finally { messageHandlerLock.unlock(); }
     }
 
     private class SmtpPacketListener implements Runnable {
@@ -303,7 +310,10 @@ public class SmtpServer implements AutoCloseable {
                 try(Socket socket = serverSocket.accept();
                     BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1));
                     PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1))) {
-                    synchronized(messageHandler) { SmtpTransactionHandler.handle(input, output, m -> notifyMessage(m)); }
+                    
+                    messageHandlerLock.lock();
+                    try { SmtpTransactionHandler.handle(input, output, m -> notifyMessage(m)); }
+                    finally { messageHandlerLock.unlock(); }
                 } catch(SmtpProtocolException spe) {
                     LOG.log(Level.WARNING, "Protocol Exception", spe);
                 } catch(IOException ioe) {
