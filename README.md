@@ -29,9 +29,9 @@ with the following improvements:
 
 Here is the compatibility map of this API:
 
-| Version  | JDK                | Package   
-|----------|--------------------|-----------
-| >= 1.0.0 | JDK 22 and upwards | `jakarta` 
+| Version  | JDK                | Package   |   
+|----------|--------------------|-----------|
+| >= 1.0.0 | JDK 22 and upwards | `jakarta` |
 
 ## Installation (maven)
 
@@ -42,55 +42,53 @@ Use the following dependency in your `pom.xml`:
 <dependency>
     <groupId>at.datenwort.commons</groupId>
     <artifactId>smtp4j</artifactId>
-    <version>1.0.0</version>
+    <version>LATEST</version>
 </dependency>
 ```
 
 ## Quick Start Guide
 
-Here is a quick example of the usage of this API that shows an oversight on
+Here is a quick example of this API that shows an oversight on
 how it can be used:
 
 ```java
-/* SMTP server is started on port 1025 */
-SmtpServerBuilder builder = new SmtpServerBuilder();
-try(
-SmtpServer server = builder.withPort(1025).start()){
+void example() {
+    /* SMTP server is started on port 1025 */
+    SmtpServerBuilder builder = new SmtpServerBuilder();
+    try (
+            SmtpServer server = builder.withPort(1025).start()) {
 
-/* create and send an SMTP message to smtp4j */
-MimeMessageBuilder messageBuilder = new MimeMessageBuilder(server);
-    messageBuilder.
+        /* create and send an SMTP message to smtp4j */
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(server);
+        messageBuilder
+                .from("source@smtp4j.local")
+                .to("target1@smtp4j.local", "John Doe <john@smtp4j.local>")
+                .cc("target3@smtp4j.local")
+                .subject("Hello, world !")
+                .body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.").
 
-from("source@smtp4j.local").
-
-to("target1@smtp4j.local","John Doe <john@smtp4j.local>").
-
-cc("target3@smtp4j.local").
-
-subject("Hello, world !").
-
-body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.").
-
-attachment("data.txt",new File("someAttachment.txt"));
+                attachment("data.txt", new File("someAttachment.txt"));
 
         messageBuilder.
 
-send(); //uses Transport.send(...)
+                send(); //uses Transport.send(...)
 
-/* retrieve the sent message in smtp4j */
-List<SmtpMessage> messages = server.readReceivedMessages();
+        /* retrieve the sent message in smtp4j */
+        List<SmtpMessage> messages = server.readReceivedMessages();
 
-assertEquals(1,messages.size());
+        assertEquals(1, messages.size());
 
-/* analyze the content of the message */
-SmtpMessage receivedMessage = messages.get(0);
-String from = receivedMessage.getFrom();
-String subject = receivedMessage.getSubject();
-String body = receivedMessage.getBody();
-Date sentDate = receivedMessage.getSentDate();
-List<String> recipientsTo = receivedMessage.getRecipients(RecipientType.TO);
-List<SmtpAttachment> attachments = receivedMessage.getAttachments();
+        /* analyze the content of the message */
+        SmtpMessage receivedMessage = messages.get(0);
+        String from = receivedMessage.getFrom();
+        String subject = receivedMessage.getSubject();
+        String body = receivedMessage.getBody();
+        Date sentDate = receivedMessage.getSentDate();
+        List<String> recipientsTo = receivedMessage.getRecipients(RecipientType.TO);
+        List<SmtpAttachment> attachments = receivedMessage.getAttachments();
+    }
 }
+
 ```
 
 ## Usage
@@ -110,21 +108,24 @@ dynamically a free port to listen to.
 A static port can simply be specified like this:
 
 ```java
-SmtpServerBuilder builder = new SmtpServerBuilder();
-try(
-SmtpServer server = builder.withPort(1025).start()){
+void example() {
+    SmtpServerBuilder builder = new SmtpServerBuilder();
+    try (SmtpServer server = builder.withPort(1025)
+            .start()) {
         //server is listening on port 1025
-        }
+    }
+}
 ```
 
 On the other hand, if no port is defined, the `SmtpServer` will find a free port
 to listen to when it is started:
 
 ```java
-SmtpServerBuilder builder = new SmtpServerBuilder();
-try(
-SmtpServer server = builder.start()){
-int port = server.getPort(); //port listen by the server
+void example() {
+    SmtpServerBuilder builder = new SmtpServerBuilder();
+    try (SmtpServer server = builder.start()) {
+        int port = server.getPort(); //port listen by the server
+    }
 }
 ```
 
@@ -141,11 +142,12 @@ for message creation and sending. The latter will be automatically connected
 to the running server (on localhost):
 
 ```java
-SmtpServerBuilder builder = new SmtpServerBuilder();
-try(
-SmtpServer server = builder.start()){
-Session session = server.createSession();
+void example() {
+    SmtpServerBuilder builder = new SmtpServerBuilder();
+    try (SmtpServer server = builder.start()) {
+        Session session = server.createSession();
 //use the session to create a MimeMessage
+    }
 }
 ```
 
@@ -175,17 +177,18 @@ List<SmtpMessage> receivedMessages = smtpServer.readReceivedMessages(2, TimeUnit
 A simple API is provided to wait and loop over the received messages:
 
 ```java
-try(SmtpMessageReader reader = smtpServer.receivedMessageReader()){
-SmtpMessage smtpMessage = reader.readMessage(); //blocks until the first message is available
-    while(smtpMessage!=null){
-/* ... */
+void example() {
+    try (SmtpMessageReader reader = smtpServer.receivedMessageReader()) {
+        SmtpMessage smtpMessage = reader.readMessage(); //blocks until the first message is available
+        while (smtpMessage != null) {
+            /* ... */
 
 //blocks until the next message is available
-smtpMessage =reader.
-
-readMessage();
+            smtpMessage = reader
+                    .readMessage();
+        }
     }
-            }
+}
 ```
 
 When the `SmtpServer` is closed, the reader will yield `null`.
@@ -196,7 +199,7 @@ them and hence, a message will be received only by one of the readers. For the s
 
 #### SMTP messages
 
-The API of `SmtpMessage` provides an easy access to all the basic fields:
+The API of `SmtpMessage` provides easy access to all the basic fields:
 
 ```java
 String from = smtpMessage.getFrom();
@@ -250,9 +253,11 @@ String contentType = attachment.getContentType(); // application/pdf; charset=us
 The content of an attachment can be read with the following piece of code:
 
 ```java
-try(InputStream is = attachment.openStream()){
+void example() {
+    try (InputStream is = attachment.openStream()) {
         //...
-        }
+    }
+}
 ```
 
 #### Client-side messages
@@ -262,38 +267,32 @@ that can easily be sent to smtp4j. The [MimeMessageBuilder](src/main/java/ch/ast
 class provides easy-to-use methods to create a Multipart MIME message:
 
 ```java
-/* SMTP server is started on port 1025 */
-SmtpServerBuilder builder = new SmtpServerBuilder();
-try(
-SmtpServer server = builder.withPort(1025).start()){
+void example() {
+    /* SMTP server is started on port 1025 */
+    SmtpServerBuilder builder = new SmtpServerBuilder();
+    try (SmtpServer server = builder.withPort(1025).start()) {
 
-/* create and send an SMTP message */
-MimeMessageBuilder messageBuilder = new MimeMessageBuilder(server).
-        from("source@smtp4j.local").
-
-        //use either multiple arguments
-                to("to1@smtp4j.local", "Igôr <to2@smtp4.local>").
-
-        //or a comma-separated list
-                to("to3@smtp4j.local, My Friend <to4@smtp4j.local>").
-
-        //or call the method multiple times
-                cc("cc1@smtp4j.local").
-        cc("cc2@smtp4j.local").
-
-        bcc("bcc@smtp4j.local").
-        at("31.12.2020 23:59:59").
-        subject("Hello, world !").
-        body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.").
-        attachment(new File("file.pdf"));
+        /* create and send an SMTP message */
+        MimeMessageBuilder messageBuilder = new MimeMessageBuilder(server)
+                .from("source@smtp4j.local")
+                //use multiple arguments ...
+                .to("to1@smtp4j.local", "Igôr <to2@smtp4.local>")
+                // ... or a comma-separated list
+                .to("to3@smtp4j.local, My Friend <to4@smtp4j.local>")
+                //or call the method multiple times
+                .cc("cc1@smtp4j.local")
+                .cc("cc2@smtp4j.local")
+                .bcc("bcc@smtp4j.local")
+                .at("31.12.2020 23:59:59")
+                .subject("Hello, world !")
+                .body("Hello\r\nGreetings from smtp4j !\r\n\r\nBye.")
+                .attachment(new File("file.pdf"));
 
 //build the message and send it to smtp4j
-    messageBuilder.
-
-send();
-
+        messageBuilder.send();
 //process the received message
 //...
+    }
 }
 ```
 
@@ -310,23 +309,23 @@ It is possible to listen to `SmtpServer` events by implementing a
 [SmtpServerListener](src/main/java/ch/astorm/smtp4j/core/SmtpServerListener.java).
 
 ```java
-SmtpServerListener myListener = new SmtpServerListener() {
-    public void notifyStart(SmtpServer server) {
-        System.out.println("Server has been started");
-    }
+void example() {
+    SmtpServerListener myListener = new SmtpServerListener() {
+        public void notifyStart(SmtpServer server) {
+            System.out.println("Server has been started");
+        }
 
-    public void notifyClose(SmtpServer server) {
-        System.out.println("Server has been closed");
-    }
+        public void notifyClose(SmtpServer server) {
+            System.out.println("Server has been closed");
+        }
 
-    public void notifyMessage(SmtpServer server, SmtpMessage message) {
-        System.out.println("Message has been received");
-    }
+        public void notifyMessage(SmtpServer server, SmtpMessage message) {
+            System.out.println("Message has been received");
+        }
+    };
+
+    mySmtpServer.addListener(myListener);
 }
-
-mySmtpServer.
-
-addListener(myListener);
 ```
 
 #### Refuse a message
@@ -335,34 +334,24 @@ It is possible to trigger message refusal through the API. The exception message
 be received on the SMTP client side.
 
 ```java
-SmtpServerBuilder builder = new SmtpServerBuilder();
-try(
-SmtpServer server = builder.start()){
-        server.
+void example() {
+    SmtpServerBuilder builder = new SmtpServerBuilder();
+    try (SmtpServer server = builder.start()) {
+        server.addListener((srv, msg) -> {
+            throw new IllegalStateException("Message refused");
+        });
 
-addListener((srv, msg) ->{
-        throw new
-
-IllegalStateException("Message refused");
-    });
-
-            try{
-            new
-
-MimeMessageBuilder(server).
-
-to("test@astorm.ch").
-
-subject("Test").
-
-body("Hello!").
-
-send();
-    }catch(
-MessagingException e){
-String message = e.getMessage(); //554 Message refused
+        try {
+            new MimeMessageBuilder(server)
+                    .to("test@astorm.ch")
+                    .subject("Test")
+                    .body("Hello!")
+                    .send();
+        } catch (MessagingException e) {
+            String message = e.getMessage(); //554 Message refused
+        }
     }
-            }
+}
 ```
 
 #### Message storage
@@ -380,11 +369,13 @@ It is possible to override this default behavior with your custom handler with t
 following piece of code:
 
 ```java
-SmtpMessageHandler myCustomHandler = new CustomSmtpMessageHandler();
+void example() {
+    SmtpMessageHandler myCustomHandler = new CustomSmtpMessageHandler();
 
-SmtpServerBuilder builder = new SmtpServerBuilder();
-try(
-SmtpServer server = builder.withMessageHandler(myCustomHandler).start()){
-        //...
-        }
+    SmtpServerBuilder builder = new SmtpServerBuilder();
+    try (SmtpServer server = builder.withMessageHandler(myCustomHandler)
+            .start()) {
+        //... your code ...
+    }
+}
 ```

@@ -19,6 +19,7 @@ package ch.astorm.smtp4j;
 import ch.astorm.smtp4j.core.SmtpAttachment;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.protocol.SmtpExchange;
+import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import jakarta.activation.DataHandler;
 import jakarta.mail.Message.RecipientType;
 import jakarta.mail.Multipart;

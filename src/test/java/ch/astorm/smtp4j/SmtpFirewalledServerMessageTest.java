@@ -17,6 +17,7 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.firewall.SmtpFirewall;
+import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import jakarta.mail.MessagingException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;

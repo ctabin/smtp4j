@@ -17,6 +17,7 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpMessage;
+import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

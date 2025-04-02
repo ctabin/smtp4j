@@ -19,6 +19,7 @@ package ch.astorm.smtp4j;
 import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.protocol.SmtpProtocolConstants;
+import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import jakarta.mail.MessagingException;
 import org.junit.jupiter.api.Test;
 

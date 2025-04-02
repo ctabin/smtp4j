@@ -14,8 +14,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-package ch.astorm.smtp4j;
+package ch.astorm.smtp4j.util;
 
+import ch.astorm.smtp4j.SmtpServer;
 import jakarta.activation.DataHandler;
 import jakarta.activation.FileDataSource;
 import jakarta.mail.Address;
