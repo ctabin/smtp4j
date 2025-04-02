@@ -14,12 +14,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-package ch.astorm.smtp4j.protocol;
+package ch.astorm.smtp4j.auth;
 
-/**
- * Exception thrown when there is an error during the protocol exchange.
- */
-public class SmtpProtocolException extends Exception {
-    public SmtpProtocolException(String message) { super(message); }
-    public SmtpProtocolException(String message, Throwable cause) { super(message, cause); }
+public interface SmtpAuth {
+    byte[] getPasswordForUser(String user);
+
+    default int getMaxTries() {
+        return 3;
+    }
 }

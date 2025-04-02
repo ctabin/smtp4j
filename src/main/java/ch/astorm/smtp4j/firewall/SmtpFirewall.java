@@ -14,12 +14,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-package ch.astorm.smtp4j.protocol;
+package ch.astorm.smtp4j.firewall;
 
-/**
- * Exception thrown when there is an error during the protocol exchange.
- */
-public class SmtpProtocolException extends Exception {
-    public SmtpProtocolException(String message) { super(message); }
-    public SmtpProtocolException(String message, Throwable cause) { super(message, cause); }
+import java.io.InputStream;
+import java.net.InetAddress;
+
+public interface SmtpFirewall {
+    default boolean accept(InetAddress inetAddress) {
+        return true;
+    }
+
+    default InputStream firewallInputStream(InputStream inputStream) {
+        return inputStream;
+    }
+
+    default boolean isAllowedFrom(String mailFrom) {
+        return true;
+    }
+
+    default boolean isAllowedRecipient(String recipient) {
+        return true;
+    }
+
+    default boolean isAllowedMessage(byte[] message) {
+        return true;
+    }
 }

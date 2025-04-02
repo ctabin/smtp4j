@@ -14,12 +14,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-package ch.astorm.smtp4j.protocol;
+package ch.astorm.smtp4j.util;
 
-/**
- * Exception thrown when there is an error during the protocol exchange.
- */
-public class SmtpProtocolException extends Exception {
-    public SmtpProtocolException(String message) { super(message); }
-    public SmtpProtocolException(String message, Throwable cause) { super(message, cause); }
+public interface ResourceLock extends AutoCloseable {
+    /**
+     * Unlocking doesn't throw any checked exception.
+     */
+    @Override
+    void close();
 }

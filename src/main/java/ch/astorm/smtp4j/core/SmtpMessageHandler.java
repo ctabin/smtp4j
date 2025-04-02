@@ -1,3 +1,18 @@
+/*
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
 
 package ch.astorm.smtp4j.core;
 
@@ -12,8 +27,8 @@ public interface SmtpMessageHandler extends SmtpServerListener {
     /**
      * Represents a simple {@code SmtpMessage} iterator.
      */
-    static interface SmtpMessageReader extends AutoCloseable {
-        
+    interface SmtpMessageReader extends AutoCloseable {
+
         /**
          * Reads the next available {@code SmtpMessage}.
          * If none, this method will block until a new one is received.
@@ -23,7 +38,7 @@ public interface SmtpMessageHandler extends SmtpServerListener {
          */
         SmtpMessage readMessage();
     }
-    
+
     /**
      * Returns a new {@code SmtpMessageReader} that loops over the received messages.
      * Note that if you create multiple {@code SmtpMessageReader} instances, the will
@@ -33,15 +48,15 @@ public interface SmtpMessageHandler extends SmtpServerListener {
      * @return A new {@code SmtpMessageReader} instance.
      */
     SmtpMessageReader messageReader();
-    
-    
+
+
     /**
      * Retrieves the received messages and clears the list.
      * In case there are already some messages returned, this method returns them
      * immediately without waiting.
-     * 
+     *
      * @param delayIfNoMessage The delay to wait when there is no message yet received or a negative value to avoid any wait.
-     * @param unit The unit of the {@code delayIfNoMessage}.
+     * @param unit             The unit of the {@code delayIfNoMessage}.
      * @return All the (newly) received messages or an empty list if none.
      */
     List<SmtpMessage> readMessages(long delayIfNoMessage, TimeUnit unit);
