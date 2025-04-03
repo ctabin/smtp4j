@@ -16,7 +16,13 @@ public class SmtpProtocolConstants {
      * Command-parameter separator.
      * See the <a href="https://datatracker.ietf.org/doc/html/rfc2821#section-4.1.1">specification</a>.
      */
-    public static String SP = " ";
+    public static String SP_FINAL = " ";
+    
+    /**
+     * Command-parameter separator (multiline reply).
+     * See the <a href="https://datatracker.ietf.org/doc/html/rfc2821#section-4.1.3">specification</a>.
+     */
+    public static String SP_CONTINUE = "-";
 
     /**
      * Colon separator.
@@ -50,6 +56,11 @@ public class SmtpProtocolConstants {
      */
     public static final int CODE_INTERMEDIATE_REPLY = 354;
 
+    /**
+     * Error code when TLS is unavailable.
+     */
+    public static final int CODE_COMMAND_TLS_UNAVAILABLE = 454;
+    
     /**
      * Error code when a command is unknown.
      */

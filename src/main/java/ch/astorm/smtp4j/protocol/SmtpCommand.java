@@ -24,6 +24,7 @@ public class SmtpCommand {
         EXPAND("EXPN"),
         VERIFY("VRFY"),
         NOOP("NOOP"),
+        STARTTLS("STARTTLS"),
         HELP("HELP"),
         RESET("RSET"),
         UNKNOWN("#UNKN#");
@@ -90,7 +91,7 @@ public class SmtpCommand {
             command = line.substring(0, colon+1);
             parameter = line.substring(colon+1).trim();
         } else {
-            int firstSpace = line.indexOf(SmtpProtocolConstants.SP);
+            int firstSpace = line.indexOf(SmtpProtocolConstants.SP_FINAL);
             command = firstSpace<0 ? line : line.substring(0, firstSpace);
             parameter = firstSpace<0 ? null : line.substring(firstSpace+1).trim();
         }

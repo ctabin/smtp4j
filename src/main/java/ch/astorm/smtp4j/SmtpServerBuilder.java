@@ -3,7 +3,10 @@ package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
+import ch.astorm.smtp4j.secure.DefaultSSLContextProvider;
+import ch.astorm.smtp4j.secure.SSLContextProvider;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadFactory;
@@ -14,6 +17,7 @@ import java.util.concurrent.ThreadFactory;
 public class SmtpServerBuilder {
     private int port;
     private SmtpMessageHandler handler;
+    private SmtpServerOptions options;
     private List<SmtpServerListener> listeners;
     private ThreadFactory threadFactory;
 
@@ -30,6 +34,57 @@ public class SmtpServerBuilder {
         return this;
     }
 
+    /**
+     * Defines the SMTP server options..
+     *
+     * @param options The options.
+     * @return This builder.
+     * @see SmtpServer#setOptions(ch.astorm.smtp4j.SmtpServerOptions)
+     */
+    public SmtpServerBuilder withOptions(SmtpServerOptions options) {
+        this.options = options;
+        return this;
+    }
+    
+    /**
+     * Defines if the {@code STARTTLS} support is enabled (false by default).
+     * You'll need to provide a {@link #withSSLContextProvider(ch.astorm.smtp4j.secure.SSLContextProvider) SSLContextProvider}.
+     *
+     * @param startTlsSupport True if the {@code STARTTLS} support must be enabled.
+     * @return This builder.
+     */
+    public SmtpServerBuilder withStartTLSSupport(boolean startTlsSupport) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.starttls = startTlsSupport;
+        return this;
+    }
+    
+    /**
+     * Defines the {@link SSLContextProvider} to use when negotiating SSL.
+     *
+     * @param provider The provider.
+     * @return This builder.
+     * @see DefaultSSLContextProvider
+     */
+    public SmtpServerBuilder withSSLContextProvider(SSLContextProvider provider) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.sslContextProvider = provider;
+        return this;
+    }
+    
+    /**
+     * Defines the {@link PrintStream} to use for debugging. If null, then no debug
+     * output will be printed.
+     *
+     * @param debug The debug stream.
+     * @return This builder.
+     */
+    public SmtpServerBuilder withDebugStream(PrintStream debug) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.debug = debug;
+        return this;
+    }
+    
     /**
      * Defines the {@code SmtpMessageHandler} to be applied for the received messages.
      *
@@ -73,6 +128,7 @@ public class SmtpServerBuilder {
      */
     public SmtpServer build() {
         SmtpServer server = new SmtpServer(port, handler, threadFactory);
+        if(options!=null) { server.setOptions(options); }
         if(listeners!=null) { listeners.forEach(l -> server.addListener(l)); }
         return server;
     }
