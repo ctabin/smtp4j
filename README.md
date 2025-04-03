@@ -11,6 +11,7 @@ Simple API to fake an SMTP server for Unit testing (and more).
 This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with the following improvements:
 - Dynamic port lookup
 - Support of MIME messages with attachments
+- Support of STARTTLS
 - Access to SMTP exchanges
 - Improved multi-threading support
 - Up-to-date dependencies
@@ -379,7 +380,7 @@ It is very simple to enable debugging to see all the inputs/outputs of the under
 SmtpServer smtpServer = new SmtpServerBuilder().
     withDebug(System.err).
     withPort(1025).
-    start()
+    start();
 ```
 
 The output will be like this:
@@ -412,7 +413,7 @@ The output will be like this:
 > .
 < 250 OK
 > QUIT
-< 250 OK
+< 221 goodbye
 ```
 
 ### Developements & ideas
