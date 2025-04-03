@@ -163,7 +163,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
                     mailFrom = enbraced.substring(1, enbraced.length()-1);
                     reply(SmtpProtocolConstants.CODE_OK, "OK");
                 } else if(commandType==Type.QUIT) {
-                    reply(SmtpProtocolConstants.CODE_OK, "OK");
+                    reply(SmtpProtocolConstants.CODE_QUIT, "goodbye");
                     break;
                 } else {
                     reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
@@ -227,7 +227,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
             }
 
             if(commandType==Type.QUIT) {
-                reply(SmtpProtocolConstants.CODE_OK, "OK");
+                reply(SmtpProtocolConstants.CODE_QUIT, "goodbye");
                 break;
             } else {
                 reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");

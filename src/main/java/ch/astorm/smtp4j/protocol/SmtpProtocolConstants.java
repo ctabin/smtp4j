@@ -40,6 +40,11 @@ public class SmtpProtocolConstants {
      * Code of the first reply of the SMTP server.
      */
     public static final int CODE_CONNECT = 220;
+    
+    /**
+     * Code replied when the {@code QUIT} command is received.
+     */
+    public static final int CODE_QUIT = 221;
 
     /**
      * Code when the command is accepted by the server.
