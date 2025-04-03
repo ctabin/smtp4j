@@ -11,7 +11,7 @@ Simple API to fake an SMTP server for Unit testing (and more).
 This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with the following improvements:
 - Dynamic port lookup
 - Support of MIME messages with attachments
-- Support of STARTTLS
+- Support of secure channel communication (STARTTLS)
 - Access to SMTP exchanges
 - Improved multi-threading support
 - Up-to-date dependencies
@@ -339,25 +339,25 @@ try(SmtpServer server = builder.withMessageHandler(myCustomHandler).start()) {
 }
 ```
 
-### STARTTLS
+### Secure channel (STARTTLS)
 
 The SMTP support the `STARTTLS` command once a client session is initiated. Also the API provides a self-signed
 certificate in order to simulate TLS effectively.
 
 ```java
 try(SmtpServer smtpServer = new SmtpServerBuilder().
-    withStartTLSSupport(true).
-    withSSLContextProvider(DefaultSSLContextProvider.selfSigned()).
-    withPort(1025).
-    start()) {
+      withStartTLSSupport(true).
+      withSSLContextProvider(DefaultSSLContextProvider.selfSigned()).
+      withPort(1025).
+      start()) {
 
   //since STARTTLS is supported, the corresponding properties are also set to
   //automatically switch over secure channel communication
   MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
-                    from("source@smtp4j.local").
-                    to("target@smtp4j.local").
-                    subject("Subject").
-                    body("Message");
+      from("source@smtp4j.local").
+      to("target@smtp4j.local").
+      subject("Subject").
+      body("Message");
   messageBuilder.send();
 }
 ```
@@ -379,7 +379,6 @@ It is very simple to enable debugging to see all the inputs/outputs of the under
 ```java
 SmtpServer smtpServer = new SmtpServerBuilder().
     withDebug(System.err).
-    withPort(1025).
     start();
 ```
 
