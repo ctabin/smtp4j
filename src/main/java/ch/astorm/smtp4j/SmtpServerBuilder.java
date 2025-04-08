@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -123,7 +124,7 @@ public class SmtpServerBuilder {
      * @return This builder, to allow method chaining.
      */
     public SmtpServerBuilder withFirewall(SmtpFirewall firewall) {
-        this.firewall = firewall;
+        this.firewall = Objects.requireNonNullElse(firewall, AllowAllSmtpFirewall.INSTANCE);
         return this;
     }
 
