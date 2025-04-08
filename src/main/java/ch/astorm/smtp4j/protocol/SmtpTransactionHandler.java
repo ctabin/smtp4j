@@ -24,6 +24,7 @@ import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
 import ch.astorm.smtp4j.secure.SmtpSecure;
 import ch.astorm.smtp4j.util.ByteArrayUtils;
 import ch.astorm.smtp4j.util.LineAwareBufferedInputStream;
+import ch.astorm.smtp4j.util.SocketTracker;
 import ch.astorm.smtp4j.util.StringUtils;
 
 import javax.net.ssl.SSLContext;
@@ -56,6 +57,7 @@ public class SmtpTransactionHandler {
     }
 
     private final SmtpServer smtpServer;
+    private final SocketTracker socketTracker;
     private final Socket socket;
     private final boolean isSecure;
     private final LineAwareBufferedInputStream input;
@@ -82,8 +84,9 @@ public class SmtpTransactionHandler {
         void receiveMessage(SmtpMessage message);
     }
 
-    private SmtpTransactionHandler(SmtpServer smtpServer, Socket socket, boolean isSecure, LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, SmtpAuth auth, SmtpSecure secure, Long maxMessageSize, MessageReceiver messageReceiver) {
+    private SmtpTransactionHandler(SmtpServer smtpServer, SocketTracker socketTracker, Socket socket, boolean isSecure, LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, SmtpAuth auth, SmtpSecure secure, Long maxMessageSize, MessageReceiver messageReceiver) {
         this.smtpServer = smtpServer;
+        this.socketTracker = socketTracker;
         this.socket = socket;
         this.isSecure = isSecure;
         this.input = input;
@@ -101,6 +104,7 @@ public class SmtpTransactionHandler {
      * with the provided parameters.
      *
      * @param smtpServer      the SMTP server instance managing the transaction
+     * @param socketTracker
      * @param socket          the socket connection used for communication
      * @param isSecure        a boolean indicating whether the connection is secure
      * @param input           the input stream to read data from the client
@@ -113,8 +117,8 @@ public class SmtpTransactionHandler {
      * @throws IOException           if an I/O error occurs while handling the transaction
      * @throws SmtpProtocolException if there is an error in SMTP protocol handling
      */
-    public static void handle(SmtpServer smtpServer, Socket socket, boolean isSecure, LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, Long maxMessageSize, SmtpAuth auth, SmtpSecure secure, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
-        SmtpTransactionHandler sth = new SmtpTransactionHandler(smtpServer, socket, isSecure, input, output, firewall, auth, secure, maxMessageSize, messageReceiver);
+    public static void handle(SmtpServer smtpServer, SocketTracker socketTracker, Socket socket, boolean isSecure, LineAwareBufferedInputStream input, PrintWriter output, SmtpFirewall firewall, Long maxMessageSize, SmtpAuth auth, SmtpSecure secure, MessageReceiver messageReceiver) throws IOException, SmtpProtocolException {
+        SmtpTransactionHandler sth = new SmtpTransactionHandler(smtpServer, socketTracker, socket, isSecure, input, output, firewall, auth, secure, maxMessageSize, messageReceiver);
         sth.execute();
     }
 
@@ -228,6 +232,7 @@ public class SmtpTransactionHandler {
                             socket.getPort(),
                             true
                     );
+                    socketTracker.registerSocket(sslSocket);
                     sslSocket.setUseClientMode(false);
                 } catch (Exception e) {
                     reply(SmtpProtocolConstants.CODE_TRANSACTION_FAILED, "TLS Upgrade failed");
@@ -237,7 +242,7 @@ public class SmtpTransactionHandler {
                 // notify client
                 reply(SmtpProtocolConstants.CODE_CONNECT, "Ready to start TLS");
 
-                smtpServer.handleConnection(sslSocket, true);
+                smtpServer.handleConnection(sslSocket, true, socketTracker);
                 // we are done here
                 return;
             }

@@ -30,6 +30,7 @@ import ch.astorm.smtp4j.secure.SmtpSecure;
 import ch.astorm.smtp4j.util.CloseableReentrantLock;
 import ch.astorm.smtp4j.util.LineAwareBufferedInputStream;
 import ch.astorm.smtp4j.util.MaxMessageSizeInputStream;
+import ch.astorm.smtp4j.util.SocketTracker;
 import jakarta.mail.Session;
 
 import javax.net.ssl.SSLContext;
@@ -79,6 +80,8 @@ public class SmtpServer implements AutoCloseable {
 
     private volatile ServerSocket serverSocket;
     private Future<?> serverThread;
+
+    private final SocketTracker socketTracker = new SocketTracker();
 
     /**
      * Default SMTP port.
@@ -404,6 +407,8 @@ public class SmtpServer implements AutoCloseable {
             //will trigger a I/O exception in the running thread
             localServerSocket.close();
 
+            socketTracker.close();
+
             serverThread.cancel(true);
             while (!serverThread.isDone()) {
                 try {
@@ -421,10 +426,10 @@ public class SmtpServer implements AutoCloseable {
     }
 
     public void handleConnectionAsync(Socket socket, boolean isSecure) {
-        executorService.submit(() -> handleConnection(socket, isSecure));
+        executorService.submit(() -> handleConnection(socket, isSecure, socketTracker));
     }
 
-    public void handleConnection(Socket socket, boolean isSecure) {
+    public void handleConnection(Socket socket, boolean isSecure, SocketTracker socketTracker) {
         try (socket;
              LineAwareBufferedInputStream input = new LineAwareBufferedInputStream(
                      firewall.firewallInputStream(
@@ -439,12 +444,14 @@ public class SmtpServer implements AutoCloseable {
                 }
             }
 
-            SmtpTransactionHandler.handle(SmtpServer.this, socket, isSecure, input, output, firewall, maxMessageSize, auth, secure, SmtpServer.this::notifyMessage);
+            SmtpTransactionHandler.handle(SmtpServer.this, socketTracker, socket, isSecure, input, output, firewall, maxMessageSize, auth, secure, SmtpServer.this::notifyMessage);
         } catch (SmtpProtocolException spe) {
             LOG.log(Level.WARNING, "Protocol Exception", spe);
         } catch (IOException ioe) {
             /* can be generally safely ignored because occurs when the server is being closed */
             LOG.log(Level.FINER, "I/O Exception", ioe);
+        } finally {
+            socketTracker.unregisterSocket(socket);
         }
     }
 
@@ -460,15 +467,25 @@ public class SmtpServer implements AutoCloseable {
         @Override
         public void run() {
             while (serverSocket != null) {
+                Socket socket = null;
+
                 try {
-                    Socket socket = serverSocket.accept();
+                    socket = serverSocket.accept();
+                    socketTracker.registerSocket(socket);
+
                     if (!firewall.accept(socket.getInetAddress())) {
+                        socketTracker.unregisterSocket(socket);
                         socket.close();
+                        return;
                     }
 
                     LOG.log(Level.FINER, "Got connection from " + socket.getRemoteSocketAddress());
                     handleConnectionAsync(socket, false);
-                } catch (IOException e) {
+                } catch (Exception e) {
+                    if (socket != null) {
+                        socketTracker.unregisterSocket(socket);
+                    }
+
                     /* can be generally safely ignored because occurs when the server is being closed */
                     LOG.log(Level.FINER, "I/O Exception", e);
                 }
