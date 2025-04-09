@@ -37,7 +37,7 @@ public class LocalServer {
     public static void main(String[] args) throws Exception {
         try (var server = new SmtpServerBuilder()
                 .withMaxMessageSize(1024 * 1024)
-                .withPort(2525)
+                .withPort(1025)
                 .withAuth(user -> "dummy".getBytes(StandardCharsets.UTF_8))
                 .withSecure(() -> {
                     try {

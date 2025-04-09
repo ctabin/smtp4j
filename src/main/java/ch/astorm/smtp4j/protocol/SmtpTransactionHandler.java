@@ -35,26 +35,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
  * Handles the SMTP protocol.
  */
 public class SmtpTransactionHandler {
-    private final static SecureRandom random;
-
-    static {
-        try {
-            random = SecureRandom.getInstanceStrong();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private final SmtpServer smtpServer;
     private final SocketTracker socketTracker;
@@ -143,7 +131,7 @@ public class SmtpTransactionHandler {
             reply(SmtpProtocolConstants.CODE_OK, Stream.of(
                             "smtp4j greets " + param,
                             Type.EIGHT_BIT_MIME.withArgs(null),
-                            auth != null ? Type.AUTH.withArgs("PLAIN CRAM-MD5") : "",
+                            auth != null ? Type.AUTH.withArgs("CRAM-MD5 LOGIN PLAIN") : "",
                             (!isSecure && secure != null) ? Type.STARTTLS.withArgs(null) : "",
                             (!isSecure && secure != null) ? "REQUIRETLS" : "",
                             Type.SIZE.withArgs(maxMessageSize != null ? maxMessageSize.toString() : ""))
@@ -173,33 +161,22 @@ public class SmtpTransactionHandler {
         boolean expectedSecurityLevelEstablished = isSecure || secure == null;
 
         int authTries = 0;
-        String currentAuthOngoing = null;
-        String currentAuthChallenge = null;
+        AuthFlow activeAuth = null;
 
         while (true) {
-            if (currentAuthOngoing != null) {
-                try {
-                    String[] credentials = StringUtils.decode(nextLine()).split(" ", 2);
-                    if (credentials.length != 2) {
-                        reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Authentication failed");
+            if (activeAuth != null) {
+                AuthFlow.State authState = activeAuth.handle();
+                switch (authState) {
+                    case FAILED:
+                        activeAuth = null;
+                        isAuthenticated = false;
                         continue;
-                    }
-
-                    String user = credentials[0];
-                    String pass = credentials[1];
-                    if (Objects.equals(pass,
-                            StringUtils.hashWithHMACMD5(
-                                    currentAuthChallenge,
-                                    auth.getPasswordForUser(user)))) {
+                    case CONTINUE:
+                        continue;
+                    case AUTHENTICATED:
+                        activeAuth = null;
                         isAuthenticated = true;
-                        reply(SmtpProtocolConstants.CODE_AUTH_OK, "OK");
-                    } else {
-                        reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Authentication failed");
-                    }
-                    continue;
-                } finally {
-                    currentAuthOngoing = null;
-                    currentAuthChallenge = null;
+                        break;
                 }
             }
 
@@ -274,32 +251,13 @@ public class SmtpTransactionHandler {
                 String authType = StringUtils.toUpperCase(authTokens[0]);
                 switch (authType) {
                     case "PLAIN":
-                        if (authTokens.length != 2) {
-                            reply(SmtpProtocolConstants.CODE_COMMAND_PARAMETERS_INVALID, "Invalid parameters");
-                            break;
-                        }
-                        String login = authTokens[1];
-                        String[] credentials = StringUtils.decode(login).split("\\x00", 3);
-                        if (credentials.length != 3) {
-                            reply(SmtpProtocolConstants.CODE_COMMAND_PARAMETERS_INVALID, "Invalid parameters");
-                            break;
-                        }
-                        String user = credentials[1];
-                        String pass = credentials[2];
-                        if (ByteArrayUtils.equals(pass.getBytes(StandardCharsets.UTF_8), auth.getPasswordForUser(user))) {
-                            isAuthenticated = true;
-                            reply(SmtpProtocolConstants.CODE_AUTH_OK, "OK");
-                        } else {
-                            reply(SmtpProtocolConstants.CODE_AUTH_FAILED, "Authentication failed");
-                        }
+                        activeAuth = new PlainAuthFlow(this, authTokens);
                         break;
                     case "CRAM-MD5":
-                        currentAuthOngoing = authType;
-                        currentAuthChallenge = String.format("<%d.%d@%s>",
-                                random.nextLong(),
-                                System.currentTimeMillis(),
-                                "mydomain.com");
-                        reply(SmtpProtocolConstants.CODE_SERVER_CHALLENGE, StringUtils.encode(currentAuthChallenge));
+                        activeAuth = new CramMd5AuthFlow(this);
+                        break;
+                    case "LOGIN":
+                        activeAuth = new LoginAuthFlow(this);
                         break;
                     default:
                         reply(SmtpProtocolConstants.CODE_COMMAND_PARAMETERS_INVALID, "Invalid parameters");
@@ -428,7 +386,7 @@ public class SmtpTransactionHandler {
         this.smtpMessageContent = null;
     }
 
-    private byte[] nextLine() throws SmtpProtocolException {
+    byte[] nextLine() throws SmtpProtocolException {
         try {
             byte[] line = input.readLine();
             if (line == null) {
@@ -514,7 +472,7 @@ public class SmtpTransactionHandler {
         output.flush();
     }
 
-    private void reply(int code, String message) {
+    void reply(int code, String message) {
         StringBuilder builder = new StringBuilder(32);
         builder.append(code);
         if (message != null) {
@@ -524,5 +482,9 @@ public class SmtpTransactionHandler {
         builder.append(SmtpProtocolConstants.CRLF);
 
         send(builder);
+    }
+
+    SmtpAuth getAuth() {
+        return auth;
     }
 }
