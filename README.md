@@ -22,7 +22,7 @@ with the following improvements:
     - ```SmtpServerBuilder.withMaxMessageSize```
 - Remote IP restriction (via SmtpFirewall)
     - ```SmtpServerBuilder.withFirewall```
-- Authentication (PLAIN, CRAM-MD5)
+- Authentication (CRAM-MD5, LOGIN, PLAIN)
     - ```SmtpServerBuilder.withAuth```
 - STARTTLS
     - ```SmtpServerBuilder.withSecure```
