@@ -476,7 +476,7 @@ public class SmtpServer implements AutoCloseable {
                     if (!firewall.accept(socket.getInetAddress())) {
                         socketTracker.unregisterSocket(socket);
                         socket.close();
-                        return;
+                        continue;
                     }
 
                     LOG.log(Level.FINER, "Got connection from " + socket.getRemoteSocketAddress());

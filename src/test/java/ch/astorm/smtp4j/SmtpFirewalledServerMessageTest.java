@@ -122,9 +122,6 @@ public class SmtpFirewalledServerMessageTest {
     }
 
     @Test
-    // Test needs to run as last test as we close the client socket.
-    // The Java Mail Trasport.send() will not recover from that.
-    @Order(Integer.MAX_VALUE)
     public void testAcceptRemote() throws Exception {
         firewall.setAcceptRemote(false);
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
@@ -138,7 +135,6 @@ public class SmtpFirewalledServerMessageTest {
     }
 
     @Test
-    @Order(1)
     public void testAcceptFrom() throws Exception {
         firewall.setAcceptFrom(false);
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
@@ -157,7 +153,6 @@ public class SmtpFirewalledServerMessageTest {
     }
 
     @Test
-    @Order(2)
     public void testAcceptRecipient() throws Exception {
         firewall.setAcceptRecipient(false);
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
@@ -176,7 +171,6 @@ public class SmtpFirewalledServerMessageTest {
     }
 
     @Test
-    @Order(3)
     public void testAcceptMessage() throws Exception {
         firewall.setAcceptMessage(false);
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer)
