@@ -19,7 +19,6 @@ package ch.astorm.smtp4j;
 import ch.astorm.smtp4j.auth.SmtpAuth;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
-import ch.astorm.smtp4j.firewall.AllowAllSmtpFirewall;
 import ch.astorm.smtp4j.firewall.SmtpFirewall;
 import ch.astorm.smtp4j.secure.SmtpSecure;
 
@@ -27,22 +26,34 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 
 /**
  * Helper to build a new {@code SmtpServer}.
  */
 public class SmtpServerBuilder {
+    private String localHostname;
     private int port;
     private SmtpMessageHandler handler;
     private List<SmtpServerListener> listeners;
     private ExecutorService executorService;
     private Duration socketTimeout;
     private Long maxMessageSize;
-    private SmtpFirewall firewall = AllowAllSmtpFirewall.INSTANCE;
+    private SmtpFirewall firewall;
     private SmtpAuth auth;
     private SmtpSecure secure;
+
+
+    /**
+     * Sets the local hostname for the SMTP server.
+     *
+     * @param hostname The hostname to use for the server.
+     * @return This builder, to allow method chaining.
+     */
+    public SmtpServerBuilder withHostname(String hostname) {
+        this.localHostname = hostname;
+        return this;
+    }
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
@@ -62,7 +73,7 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, SmtpMessageHandler, ExecutorService, Duration, Long, SmtpFirewall, SmtpAuth, SmtpSecure)
+     * @see SmtpServer#SmtpServer(String, int, SmtpMessageHandler, ExecutorService, Duration, Long, SmtpFirewall, SmtpAuth, SmtpSecure)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
@@ -124,7 +135,7 @@ public class SmtpServerBuilder {
      * @return This builder, to allow method chaining.
      */
     public SmtpServerBuilder withFirewall(SmtpFirewall firewall) {
-        this.firewall = Objects.requireNonNullElse(firewall, AllowAllSmtpFirewall.INSTANCE);
+        this.firewall = firewall;
         return this;
     }
 
@@ -156,7 +167,7 @@ public class SmtpServerBuilder {
      * @return A new {@code SmtpServer} instance.
      */
     public SmtpServer build() {
-        SmtpServer server = new SmtpServer(port, handler, executorService, socketTimeout, maxMessageSize, firewall, auth, secure);
+        SmtpServer server = new SmtpServer(localHostname, port, handler, executorService, socketTimeout, maxMessageSize, firewall, auth, secure);
         if (listeners != null) {
             listeners.forEach(server::addListener);
         }

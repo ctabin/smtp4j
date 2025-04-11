@@ -114,7 +114,7 @@ public class SmtpTransactionHandler {
         // "server ready" message isn't required if we just started TLS
         if (!isSecure) {
             //inform the client about the SMTP server state
-            reply(SmtpProtocolConstants.CODE_CONNECT, "localhost smtp4j server ready");
+            reply(SmtpProtocolConstants.CODE_CONNECT, String.format("%s smtp4j server ready", smtpServer.getLocalHostname()));
         }
 
         //extends the EHLO/HELO command to greet the client
@@ -131,9 +131,10 @@ public class SmtpTransactionHandler {
             reply(SmtpProtocolConstants.CODE_OK, Stream.of(
                             "smtp4j greets " + param,
                             Type.EIGHT_BIT_MIME.withArgs(null),
+                            "SMTPUTF8",
                             auth != null ? Type.AUTH.withArgs("CRAM-MD5 LOGIN PLAIN") : "",
-                            (!isSecure && secure != null) ? Type.STARTTLS.withArgs(null) : "",
-                            (!isSecure && secure != null) ? "REQUIRETLS" : "",
+                            (secure != null) ? Type.STARTTLS.withArgs(null) : "",
+                            (secure != null) ? "REQUIRETLS" : "",
                             Type.SIZE.withArgs(maxMessageSize != null ? maxMessageSize.toString() : ""))
                     .filter(s -> !s.isEmpty())
                     .toList()
@@ -462,7 +463,7 @@ public class SmtpTransactionHandler {
     private void send(StringBuilder builder) {
         SmtpExchange exchange = new SmtpExchange(
                 readData.stream()
-                        .map(b -> new String(b, StandardCharsets.ISO_8859_1))
+                        .map(b -> new String(b, StandardCharsets.UTF_8))
                         .toList(),
                 builder.toString());
         exchanges.add(exchange);
@@ -482,6 +483,10 @@ public class SmtpTransactionHandler {
         builder.append(SmtpProtocolConstants.CRLF);
 
         send(builder);
+    }
+
+    SmtpServer getSmtpServer() {
+        return smtpServer;
     }
 
     SmtpAuth getAuth() {

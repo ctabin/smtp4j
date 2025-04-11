@@ -51,6 +51,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -68,6 +69,7 @@ public class SmtpServer implements AutoCloseable {
     private static final Logger LOG = Logger.getLogger(SmtpServer.class.getName());
 
     private final CloseableReentrantLock thisLock = new CloseableReentrantLock();
+    private String localHostname;
     private int port;
     private final SmtpMessageHandler messageHandler;
     private final List<SmtpServerListener> listeners;
@@ -100,7 +102,7 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      */
     public SmtpServer(int port) {
-        this(port, null, null, null, null, AllowAllSmtpFirewall.INSTANCE, null, null);
+        this(null, port, null, null, null, null, null, null, null);
     }
 
     /**
@@ -108,6 +110,7 @@ public class SmtpServer implements AutoCloseable {
      * The {@code messageHandler} will always be notified first for the {@link SmtpServerListener}
      * events and is NOT part of the {@link #getListeners() listeners} list.
      *
+     * @param localHostname
      * @param port            The port to listen to. A value less or equal to zero indicates that
      *                        a free port as to be discovered when the {@link #start() start} method
      *                        is called.
@@ -120,14 +123,15 @@ public class SmtpServer implements AutoCloseable {
      * @param auth
      * @param secure
      */
-    public SmtpServer(int port, SmtpMessageHandler messageHandler, ExecutorService executorService, Duration socketTimeout, Long maxMessageSize, SmtpFirewall firewall, SmtpAuth auth, SmtpSecure secure) {
+    public SmtpServer(String localHostname, int port, SmtpMessageHandler messageHandler, ExecutorService executorService, Duration socketTimeout, Long maxMessageSize, SmtpFirewall firewall, SmtpAuth auth, SmtpSecure secure) {
+        this.localHostname = Objects.requireNonNullElse(localHostname, "localhost");
         this.port = port;
         this.messageHandler = messageHandler != null ? messageHandler : new DefaultSmtpMessageHandler();
         this.executorService = executorService != null ? executorService : Executors.newWorkStealingPool();
         this.listeners = new ArrayList<>(4);
         this.socketTimeout = socketTimeout;
         this.maxMessageSize = maxMessageSize;
-        this.firewall = firewall;
+        this.firewall = Objects.requireNonNullElse(firewall, AllowAllSmtpFirewall.INSTANCE);
         this.auth = auth;
         this.secure = secure;
     }
@@ -262,6 +266,15 @@ public class SmtpServer implements AutoCloseable {
      */
     public List<SmtpMessage> readReceivedMessages(long delayIfNoMessage, TimeUnit unit) {
         return messageHandler.readMessages(delayIfNoMessage, unit);
+    }
+
+    /**
+     * Retrieves the local hostname configured for this SMTP server instance.
+     *
+     * @return The local hostname as a {@code String}.
+     */
+    public String getLocalHostname() {
+        return localHostname;
     }
 
     /**
@@ -434,7 +447,7 @@ public class SmtpServer implements AutoCloseable {
              LineAwareBufferedInputStream input = new LineAwareBufferedInputStream(
                      firewall.firewallInputStream(
                              wrapMaxMessageSizeStream(socket.getInputStream())));
-             PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.US_ASCII))) {
+             PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8))) {
 
             if (socketTimeout != null) {
                 try {

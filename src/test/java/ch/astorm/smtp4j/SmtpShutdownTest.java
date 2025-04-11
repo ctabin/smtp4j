@@ -37,6 +37,7 @@ public class SmtpShutdownTest {
     @Test
     public void testCloseAllClientsOnShutdown() throws Exception {
         try (SmtpServer smtpServer = new SmtpServerBuilder()
+                .withHostname("dummyhost")
                 .withPort(1025)
                 .start();
              Socket clientSocket = new Socket();
@@ -47,7 +48,7 @@ public class SmtpShutdownTest {
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.US_ASCII));
 
             String readResult = reader.readLine();
-            assertEquals("220 localhost smtp4j server ready", readResult);
+            assertEquals("220 dummyhost smtp4j server ready", readResult);
 
             smtpServer.close();
 

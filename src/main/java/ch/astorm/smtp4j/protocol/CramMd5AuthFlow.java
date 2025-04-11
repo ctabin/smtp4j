@@ -78,7 +78,7 @@ public class CramMd5AuthFlow implements AuthFlow {
         currentAuthChallenge = String.format("<%d.%d@%s>",
                 random.nextLong(),
                 System.currentTimeMillis(),
-                "mydomain.com");
+                transactionHandler.getSmtpServer().getLocalHostname());
         transactionHandler.reply(SmtpProtocolConstants.CODE_SERVER_CHALLENGE, StringUtils.encode(currentAuthChallenge));
     }
 }
