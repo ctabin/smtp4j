@@ -339,7 +339,42 @@ try(SmtpServer server = builder.withMessageHandler(myCustomHandler).start()) {
 }
 ```
 
-### Secure channel (STARTTLS)
+### Secure channel (SMTPS)
+
+By default, the `SMTP` protocol is used, which is not encrypted. To use `SMTPS` instead, use
+the following code snippet:
+
+```java
+try(SmtpServer smtpServer = new SmtpServerBuilder().
+      withProtocol(Protocol.SMTPS).
+      withSSLContextProvider(DefaultSSLContextProvider.selfSigned()).
+      withPort(1025).
+      start()) {
+  MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
+      from("source@smtp4j.local").
+      to("target@smtp4j.local").
+      subject("Subject").
+      body("Message");
+  messageBuilder.send();
+}
+```
+
+**Note**: it is yet not possible to have both `STMP` and `STMPS` protocols enabled at the same time in the same `SmtpServer`.
+You'll have to create two different instances for each protocol or allow the `STARTTLS` command (see below).
+
+When the `SMTPS` protocol is used, the following SMTP properties are set when creating a new
+Session:
+
+| Property | Value |
+| -------- | ----- |
+| `mail.transport.protocol` | `smtps` |
+| `mail.transport.protocol.rfc822` | `smtps` |
+| `mail.smtps.host` | `localhost` |
+| `mail.smtps.port` | `<port>` |
+| `mail.smtps.ssl.checkserveridentity` | `false` |
+| `mail.smtps.ssl.trust` | `*` |
+
+#### Switch to secure channel (STARTTLS)
 
 The SMTP support the `STARTTLS` command once a client session is initiated. Also the API provides a self-signed
 certificate in order to simulate TLS effectively.
@@ -367,6 +402,10 @@ Session:
 
 | Property | Value |
 | -------- | ----- |
+| `mail.transport.protocol` | `smtp` |
+| `mail.transport.protocol.rfc822` | `smtp` |
+| `mail.smtp.host` | `localhost` |
+| `mail.smtp.port` | `<port>` |
 | `mail.smtp.starttls.enable` | `true` |
 | `mail.smtp.starttls.required` | `true` |
 | `mail.smtp.ssl.checkserveridentity` | `false` |
@@ -418,7 +457,6 @@ The output will be like this:
 ### Developements & ideas
 
 Here are future developement ideas:
-- SMTPS support
 - Mailbox support
 - 8BITMIME command
 - PIPELINING command

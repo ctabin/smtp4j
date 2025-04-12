@@ -3,6 +3,7 @@ package ch.astorm.smtp4j.protocol;
 
 import ch.astorm.smtp4j.SmtpServer;
 import ch.astorm.smtp4j.SmtpServerOptions;
+import ch.astorm.smtp4j.SmtpServerOptions.Protocol;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
 import java.io.BufferedReader;
@@ -87,6 +88,16 @@ public class SmtpTransactionHandler implements AutoCloseable {
     
     private void execute() throws SmtpProtocolException {
         if(!secureChannel) {
+            if(options.protocol==Protocol.SMTPS) {
+                try { upgradeToTLSSocket(); }
+                catch(Exception e) { throw new SmtpProtocolException("TLS Upgrade failed (SMTPS)", e); }
+
+                reply(SmtpProtocolConstants.CODE_CONNECT, "localhost smtp4j server ready (SMPTS)");
+
+                execute();
+                return;
+            }
+
             //inform the client about the SMTP server state
             reply(SmtpProtocolConstants.CODE_CONNECT, "localhost smtp4j server ready");
         }
@@ -117,16 +128,8 @@ public class SmtpTransactionHandler implements AutoCloseable {
             SmtpCommand startTTLS = nextCommand();
             if(startTTLS.getType()==Type.STARTTLS) {
                 PrintWriter plainStream = output;
-                SSLSocket sslSocket;
                 try {
-                    SSLContext sslContext = options.sslContextProvider.getSSLContext();
-                    if(sslContext==null) { throw new IllegalStateException("SSLContext is null"); }
-
-                    SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-                    sslSocket = (SSLSocket)sslSocketFactory.createSocket(socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
-                    sslSocket.setUseClientMode(false);
-
-                    this.initSocket(sslSocket, true);
+                    upgradeToTLSSocket();
                 } catch(Exception e) {
                     reply(SmtpProtocolConstants.CODE_TRANSACTION_FAILED, "TLS Upgrade failed");
                     throw new SmtpProtocolException("TLS Upgrade failed", e);
@@ -143,6 +146,19 @@ public class SmtpTransactionHandler implements AutoCloseable {
         
         //start reading the transaction data
         readTransaction();
+    }
+
+    private void upgradeToTLSSocket() throws Exception {
+        if(options.sslContextProvider==null) { throw new IllegalStateException("No SSLContextProvider defined"); }
+
+        SSLContext sslContext = options.sslContextProvider.getSSLContext();
+        if(sslContext==null) { throw new IllegalStateException("SSLContext is null"); }
+
+        SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+        SSLSocket sslSocket = (SSLSocket)sslSocketFactory.createSocket(socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
+        sslSocket.setUseClientMode(false);
+
+        this.initSocket(sslSocket, true);
     }
 
     private String mailFrom;

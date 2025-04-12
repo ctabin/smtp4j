@@ -1,6 +1,7 @@
 
 package ch.astorm.smtp4j;
 
+import ch.astorm.smtp4j.SmtpServerOptions.Protocol;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageReader;
@@ -9,14 +10,9 @@ import ch.astorm.smtp4j.core.SmtpServerListener;
 import ch.astorm.smtp4j.protocol.SmtpProtocolException;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
 import jakarta.mail.Session;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -113,15 +109,21 @@ public class SmtpServer implements AutoCloseable {
      */
     public Properties getSessionProperties() {
         if(port<=0) { throw new IllegalStateException("Dynamic port lookup: server must be started"); }
-        
+
+        String protocol = serverOptions.protocol.name().toLowerCase();
+
         Properties props = new Properties();
-        props.setProperty("mail.smtp.host", "localhost");
-        props.setProperty("mail.smtp.port", ""+port);
+        props.setProperty("mail.transport.protocol", protocol);
+        props.setProperty("mail.transport.protocol.rfc822", protocol);
+        props.setProperty("mail."+protocol+".host", "localhost");
+        props.setProperty("mail."+protocol+".port", ""+port);
         if(serverOptions.starttls) {
-            props.put("mail.smtp.starttls.enable", "true");
-            props.put("mail.smtp.starttls.required", "true");
-            props.put("mail.smtp.ssl.checkserveridentity", "false");
-            props.put("mail.smtp.ssl.trust", "*");
+            props.put("mail."+protocol+".starttls.enable", "true");
+            props.put("mail."+protocol+".starttls.required", "true");
+        }
+        if(serverOptions.starttls || serverOptions.protocol==Protocol.SMTPS) {
+            props.put("mail."+protocol+".ssl.checkserveridentity", "false");
+            props.put("mail."+protocol+".ssl.trust", "*");
         }
         return props;
     }
@@ -130,6 +132,7 @@ public class SmtpServer implements AutoCloseable {
      * Creates a new {@code Session} instance that will send messages to this server.
      * 
      * @return A new {@code Session} instance.
+     * @see #getSessionProperties()
      */
     public Session createSession() {
         return Session.getInstance(getSessionProperties());

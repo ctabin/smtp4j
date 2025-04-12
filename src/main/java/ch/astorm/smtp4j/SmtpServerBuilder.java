@@ -1,6 +1,7 @@
 
 package ch.astorm.smtp4j;
 
+import ch.astorm.smtp4j.SmtpServerOptions.Protocol;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
 import ch.astorm.smtp4j.secure.DefaultSSLContextProvider;
@@ -48,7 +49,8 @@ public class SmtpServerBuilder {
     
     /**
      * Defines if the {@code STARTTLS} support is enabled (false by default).
-     * You'll need to provide a {@link #withSSLContextProvider(ch.astorm.smtp4j.secure.SSLContextProvider) SSLContextProvider}.
+     * If true, then a {@link #withSSLContextProvider(ch.astorm.smtp4j.secure.SSLContextProvider) SSL context provider}
+     * must be set.
      *
      * @param startTlsSupport True if the {@code STARTTLS} support must be enabled.
      * @return This builder.
@@ -56,6 +58,20 @@ public class SmtpServerBuilder {
     public SmtpServerBuilder withStartTLSSupport(boolean startTlsSupport) {
         if(options==null) { options = new SmtpServerOptions(); }
         options.starttls = startTlsSupport;
+        return this;
+    }
+
+    /**
+     * Defines the protocol to used.
+     * If the {@link Protocol#SMTPS} is used, then a {@link #withSSLContextProvider(ch.astorm.smtp4j.secure.SSLContextProvider) SSL context provider}
+     * must be set.
+     *
+     * @param protocol The protocol (by default {@link Protocol#SMTP}.)
+     * @return This builder.
+     */
+    public SmtpServerBuilder withProtocol(Protocol protocol) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.protocol = protocol;
         return this;
     }
     
