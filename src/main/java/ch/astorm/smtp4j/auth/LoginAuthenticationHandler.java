@@ -43,10 +43,6 @@ public class LoginAuthenticationHandler implements SmtpAuthenticatorHandler {
         exchangeHandler.reply(SmtpProtocolConstants.CODE_SERVER_CHALLENGE, respPasswordEncoded);
         String password = new String(decoder.decode(exchangeHandler.nextLine()), StandardCharsets.UTF_8);
 
-        if(options.usersRepository==null) {
-            return false;
-        }
-
         UserAuthenticator authenticator = options.usersRepository.getAuthenticator();
         try {
             authenticator.checkCredentials(new PasswordAuthentication(username, password));

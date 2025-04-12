@@ -76,10 +76,6 @@ public class PlainAuthenticationHandler implements SmtpAuthenticatorHandler {
         String authenticationIdentity = new String(Arrays.copyOfRange(decodedCredentials, firstNul+1, secondNul), StandardCharsets.UTF_8);
         String clearTextPassword = new String(Arrays.copyOfRange(decodedCredentials, secondNul+1, decodedCredentials.length), StandardCharsets.UTF_8);
 
-        if(options.usersRepository==null) {
-            return false;
-        }
-
         UserAuthenticator authenticator = options.usersRepository.getAuthenticator();
         try {
             authenticator.checkCredentials(new PasswordAuthentication(authenticationIdentity, clearTextPassword));
