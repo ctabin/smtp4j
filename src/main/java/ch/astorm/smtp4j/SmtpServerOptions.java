@@ -1,10 +1,15 @@
 
 package ch.astorm.smtp4j;
 
+import ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler;
 import ch.astorm.smtp4j.protocol.SmtpCommand;
 import ch.astorm.smtp4j.secure.DefaultSSLContextProvider;
 import ch.astorm.smtp4j.secure.SSLContextProvider;
+import ch.astorm.smtp4j.store.SimpleUserRepository;
+import ch.astorm.smtp4j.store.UserRepository;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Represents options of the {@link SmtpServer}.
@@ -56,4 +61,15 @@ public class SmtpServerOptions {
      * String reply when a client connects to smtp4j.
      */
     public String connectionString = "localhost smtp4j server ready";
+
+    /**
+     * List of {@link SmtpAuthenticatorHandler}.
+     * If this list has one item or more, an authentication will be required from the client.
+     */
+    public List<SmtpAuthenticatorHandler> authenticators = new ArrayList<>();
+
+    /**
+     * The users repository used for the authentication.
+     */
+    public UserRepository usersRepository = new SimpleUserRepository();
 }

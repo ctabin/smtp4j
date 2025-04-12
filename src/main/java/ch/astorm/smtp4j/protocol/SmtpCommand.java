@@ -18,6 +18,7 @@ public class SmtpCommand {
     public static enum Type {
         EHLO("EHLO", "HELO"),
         QUIT("QUIT"),
+        AUTH("AUTH"),
         MAIL_FROM("MAIL FROM:"),
         RECIPIENT("RCPT TO:"),
         DATA("DATA"),

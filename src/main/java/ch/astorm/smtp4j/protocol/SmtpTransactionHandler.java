@@ -4,6 +4,8 @@ package ch.astorm.smtp4j.protocol;
 import ch.astorm.smtp4j.SmtpServer;
 import ch.astorm.smtp4j.SmtpServerOptions;
 import ch.astorm.smtp4j.SmtpServerOptions.Protocol;
+import ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler;
+import ch.astorm.smtp4j.auth.SmtpExchangeHandler;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
 import java.io.BufferedReader;
@@ -102,6 +104,8 @@ public class SmtpTransactionHandler implements AutoCloseable {
             reply(SmtpProtocolConstants.CODE_CONNECT, options.connectionString);
         }
 
+        boolean requireClientAuthentication = options.authenticators!=null && !options.authenticators.isEmpty();
+
         //extends the EHLO/HELO command to greet the client
         boolean supportsStartTls = options.starttls && !secureChannel;
         SmtpCommand ehlo = SmtpCommand.parse(nextLine());
@@ -113,6 +117,11 @@ public class SmtpTransactionHandler implements AutoCloseable {
                 List<String> replies = new ArrayList<>();
                 replies.add(greetings);
                 if(supportsStartTls) { replies.add("STARTTLS"); }
+
+                if(requireClientAuthentication) {
+                    String authSchemes = options.authenticators.stream().map(s -> s.getName()).reduce((a, b) -> a+" "+b).get();
+                    replies.add("AUTH "+authSchemes);
+                }
                 
                 reply(SmtpProtocolConstants.CODE_OK, replies);
             } else {
@@ -143,7 +152,39 @@ public class SmtpTransactionHandler implements AutoCloseable {
                 stackedCommands.add(startTTLS);
             }
         }
-        
+
+        if(requireClientAuthentication) {
+            SmtpCommand authCommand = nextCommand();
+            if(authCommand.getType()!=Type.AUTH) {
+                reply(SmtpProtocolConstants.CODE_AUTHENTICATION_REQUIRED, "Authentication needed");
+                return;
+            }
+
+            String param = authCommand.getParameter();
+            int nextSpace = param.indexOf(' ');
+            String authScheme = param.substring(0, nextSpace<0 ? param.length() : nextSpace);
+            SmtpAuthenticatorHandler handler = options.authenticators.stream().filter(h -> h.getName().equalsIgnoreCase(authScheme)).findFirst().orElse(null);
+            if(handler==null) {
+                reply(SmtpProtocolConstants.CODE_BAD_AUTHENTICATION_SCHEME, "Authentication scheme "+authScheme+" not supported");
+                return;
+            }
+
+            try {
+                boolean authenticated = handler.authenticate(authCommand, new InternalExchangeHandler(this), options);
+
+                if(!authenticated) {
+                    reply(SmtpProtocolConstants.CODE_AUTHENTICATION_FAILURE, "Authentication failed");
+                    return;
+                } else {
+                    reply(SmtpProtocolConstants.CODE_AUTHENTICATION_SUCCESS, "Credentials accepted");
+                }
+            } catch(Exception e) {
+                reply(SmtpProtocolConstants.CODE_AUTHENTICATION_FAILURE, e.getMessage());
+                if(e instanceof SmtpProtocolException) { throw (SmtpProtocolException)e; }
+                else { throw new SmtpProtocolException("Unable to process authentication", e); }
+            }
+        }
+
         //start reading the transaction data
         readTransaction();
     }
@@ -159,6 +200,13 @@ public class SmtpTransactionHandler implements AutoCloseable {
         sslSocket.setUseClientMode(false);
 
         this.initSocket(sslSocket, true);
+    }
+
+    private static class InternalExchangeHandler implements SmtpExchangeHandler {
+        private final SmtpTransactionHandler sth;
+        private InternalExchangeHandler(SmtpTransactionHandler sth) { this.sth = sth; }
+        @Override public String nextLine() throws SmtpProtocolException { return sth.nextLine(); }
+        @Override public void reply(int code, String message) { sth.reply(code, message); }
     }
 
     private String mailFrom;

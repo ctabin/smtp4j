@@ -1,9 +1,10 @@
 
-package ch.astorm.smtp4j;
+package ch.astorm.smtp4j.secure;
 
+import ch.astorm.smtp4j.SmtpServer;
+import ch.astorm.smtp4j.SmtpServerBuilder;
 import ch.astorm.smtp4j.SmtpServerOptions.Protocol;
 import ch.astorm.smtp4j.core.SmtpMessage;
-import ch.astorm.smtp4j.secure.DefaultSSLContextProvider;
 import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
