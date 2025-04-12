@@ -47,6 +47,7 @@ public class SmtpServerMessageTest {
     public static void init() throws Exception {
         SmtpServerBuilder builder = new SmtpServerBuilder();
         smtpServer = builder.
+            withConnectionString("custom connection string").
             withStartTLSSupport(false).
             withSSLContextProvider(DefaultSSLContextProvider.selfSigned()).
             withDebugStream(System.err).

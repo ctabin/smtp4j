@@ -92,14 +92,14 @@ public class SmtpTransactionHandler implements AutoCloseable {
                 try { upgradeToTLSSocket(); }
                 catch(Exception e) { throw new SmtpProtocolException("TLS Upgrade failed (SMTPS)", e); }
 
-                reply(SmtpProtocolConstants.CODE_CONNECT, "localhost smtp4j server ready (SMPTS)");
+                reply(SmtpProtocolConstants.CODE_CONNECT, options.connectionString);
 
                 execute();
                 return;
             }
 
             //inform the client about the SMTP server state
-            reply(SmtpProtocolConstants.CODE_CONNECT, "localhost smtp4j server ready");
+            reply(SmtpProtocolConstants.CODE_CONNECT, options.connectionString);
         }
 
         //extends the EHLO/HELO command to greet the client
@@ -306,7 +306,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
     private void reply(PrintWriter stream, int code, String message, String separator) {
         StringBuilder builder = new StringBuilder(32);
         builder.append(code);
-        if(message!=null) {
+        if(message!=null && !message.trim().isEmpty()) {
             builder.append(separator);
             builder.append(message);
         }
