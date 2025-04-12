@@ -170,7 +170,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
             }
 
             try {
-                boolean authenticated = handler.authenticate(authCommand, new InternalExchangeHandler(this), options);
+                boolean authenticated = options.usersRepository!=null ? handler.authenticate(authCommand, new InternalExchangeHandler(this), options) : false;
 
                 if(!authenticated) {
                     reply(SmtpProtocolConstants.CODE_AUTHENTICATION_FAILURE, "Authentication failed");

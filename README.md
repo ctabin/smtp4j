@@ -12,7 +12,7 @@ This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with th
 - Dynamic port lookup
 - Support of MIME messages with attachments
 - Support of secure channel communication (`SMTPS` and `STARTTLS`)
-- Support of `PLAIN` and `LOGIN` authentication schemes
+- Support of `PLAIN`,`LOGIN` and `CRAM-MD5` authentication schemes
 - Access to SMTP exchanges
 - Improved multi-threading support
 - Up-to-date dependencies
@@ -442,6 +442,7 @@ It is possible to support multiple authentication schemes and users:
 try(SmtpServer smtpServer = new SmtpServerBuilder().
     withAuthenticator(PlainAuthenticationHandler.INSTANCE).
     withAuthenticator(LoginAuthenticationHandler.INSTANCE).
+    withAuthenticator(CramMD5AuthenticationHandler.INSTANCE).
     withUser("jdoe", "somePassword").
     withUser("asmith", "otherPassword").
     withUser("mwindu", "customPasword").
@@ -457,6 +458,9 @@ the following properties:
 | Property | Value |
 | -------- | ----- |
 | `mail.smtp.auth` | `true` |
+| `mail.smtp.sasl.enable` | `true` (only with `CRAM-MD5`) |
+
+**Note**: The authentication scheme `CRAM-MD5` is [deprecated](https://en.wikipedia.org/wiki/CRAM-MD5) and should not be used in production.
 
 ### Debugging Internals
 

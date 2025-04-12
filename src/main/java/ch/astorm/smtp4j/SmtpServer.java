@@ -129,6 +129,11 @@ public class SmtpServer implements AutoCloseable {
         }
         if(serverOptions.authenticators!=null && !serverOptions.authenticators.isEmpty()) {
             props.put("mail."+protocol+".auth", "true");
+
+            //necessary for CRAM-MD5 because the authentication method is obsolete
+            if(serverOptions.authenticators.stream().map(a -> a.getName()).anyMatch(n -> n.equals("CRAM-MD5"))) {
+                props.put("mail."+protocol+".sasl.enable", "true");
+            }
         }
         return props;
     }
