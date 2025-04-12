@@ -464,7 +464,7 @@ It is very simple to enable debugging to see all the inputs/outputs of the under
 
 ```java
 SmtpServer smtpServer = new SmtpServerBuilder().
-    withDebug(System.err).
+    withDebugStream(System.err).
     start();
 ```
 
