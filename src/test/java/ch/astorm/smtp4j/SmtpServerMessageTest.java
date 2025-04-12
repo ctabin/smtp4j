@@ -100,12 +100,12 @@ public class SmtpServerMessageTest {
     public void testMultipleAddresses() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
         messageBuilder.from("from@local.host").
-                       to("target1to@local.host, Cédric 2 TO <target2@smtp4j.local>", "another-targer@smtp4j.local").
-                       cc("target1cc@local.host, Rôgë 2 CC <target2@smtp4j.local>").
-                       bcc("target1bcc@local.host, Îrfen 2 BCC <target2@smtp4j.local>").
-                       toRecipient(RecipientType.TO, "anotherTo@smtp4j.local").
-                       subject("Subject test").
-                       body("Some simple message");
+            to("target1to@local.host, Cédric 2 TO <target2@smtp4j.local>", "another-targer@smtp4j.local").
+            cc("target1cc@local.host, Rôgë 2 CC <target2@smtp4j.local>").
+            bcc("target1bcc@local.host, Îrfen 2 BCC <target2@smtp4j.local>").
+            toRecipient(RecipientType.TO, "anotherTo@smtp4j.local").
+            subject("Subject test").
+            body("Some simple message");
         messageBuilder.send();
 
         List<SmtpMessage> received = smtpServer.readReceivedMessages();
@@ -149,13 +149,13 @@ public class SmtpServerMessageTest {
     public void testSimpleMessageMultiPartNoCharset() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
         messageBuilder.from("from@local.host").
-                       to("target1@local.host").
-                       to("target2@local.host").
-                       cc("target3@local.host").
-                       bcc("target4@local.host").
-                       at("31.12.2020 23:59:59").
-                       subject("Subject éèôîï & Â%=").
-                       body("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.");
+            to("target1@local.host").
+            to("target2@local.host").
+            cc("target3@local.host").
+            bcc("target4@local.host").
+            at("31.12.2020 23:59:59").
+            subject("Subject éèôîï & Â%=").
+            body("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.");
         messageBuilder.send();
         
         assertThrows(IllegalStateException.class, () -> messageBuilder.send());
@@ -237,9 +237,9 @@ public class SmtpServerMessageTest {
     public void testMessageWithMultipleAttachments() throws Exception {
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer);
         messageBuilder.from("source@smtp4j.local").
-                to("target@smtp4j.local").
-                subject("Message with multiple attachments", StandardCharsets.UTF_8).
-                body("There is your content", StandardCharsets.UTF_8);
+            to("target@smtp4j.local").
+            subject("Message with multiple attachments", StandardCharsets.UTF_8).
+            body("There is your content", StandardCharsets.UTF_8);
         
         String dynContent = "";
         {
@@ -431,10 +431,10 @@ public class SmtpServerMessageTest {
     public void testSpecialMessageDataForDot() throws Exception {
         String text = "This méssage has multiple lines in SMTP and a dot.dot.dot.dot.dot.dot..dot.";
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
-                from("source@smtp4j.local").
-                to("target@smtp4j.local").
-                subject("Message with multiple attachments").
-                body(text);
+            from("source@smtp4j.local").
+            to("target@smtp4j.local").
+            subject("Message with multiple attachments").
+            body(text);
 
         messageBuilder.send();
 
@@ -454,10 +454,10 @@ public class SmtpServerMessageTest {
         Session session = Session.getInstance(props);
         
         MimeMessageBuilder messageBuilder = new MimeMessageBuilder(session).
-                from("source@smtp4j.local").
-                to("target@smtp4j.local").
-                subject("Subject").
-                body("Message");
+            from("source@smtp4j.local").
+            to("target@smtp4j.local").
+            subject("Subject").
+            body("Message");
 
         messageBuilder.send();
         assertEquals(1, smtpServer.readReceivedMessages().size());
@@ -468,10 +468,10 @@ public class SmtpServerMessageTest {
         smtpServer.getOptions().starttls = true;
         try {
             MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
-                    from("source@smtp4j.local").
-                    to("target@smtp4j.local").
-                    subject("Subject").
-                    body("Message");
+                from("source@smtp4j.local").
+                to("target@smtp4j.local").
+                subject("Subject").
+                body("Message");
 
             messageBuilder.send();
             assertEquals(1, smtpServer.readReceivedMessages().size());
