@@ -7,6 +7,7 @@ import ch.astorm.smtp4j.auth.PlainAuthenticationHandler;
 import ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
+import ch.astorm.smtp4j.protocol.SmtpCommand;
 import ch.astorm.smtp4j.secure.DefaultSSLContextProvider;
 import ch.astorm.smtp4j.secure.SSLContextProvider;
 import ch.astorm.smtp4j.store.SimpleUserRepository;
@@ -15,6 +16,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadFactory;
+import java.util.function.Function;
 
 /**
  * Helper to build a new {@code SmtpServer}.
@@ -58,6 +60,7 @@ public class SmtpServerBuilder {
      *
      * @param startTlsSupport True if the {@code STARTTLS} support must be enabled.
      * @return This builder.
+     * @see SmtpServerOptions#starttls
      */
     public SmtpServerBuilder withStartTLSSupport(boolean startTlsSupport) {
         if(options==null) { options = new SmtpServerOptions(); }
@@ -72,6 +75,7 @@ public class SmtpServerBuilder {
      *
      * @param protocol The protocol (by default {@link Protocol#SMTP}.)
      * @return This builder.
+     * @see SmtpServerOptions#protocol
      */
     public SmtpServerBuilder withProtocol(Protocol protocol) {
         if(options==null) { options = new SmtpServerOptions(); }
@@ -93,15 +97,16 @@ public class SmtpServerBuilder {
     }
     
     /**
-     * Defines the {@link PrintStream} to use for debugging. If null, then no debug
+     * Defines the {@link PrintStream} to use for debugging.If null, then no debug
      * output will be printed.
      *
-     * @param debug The debug stream.
+     * @param stream The debug stream.
      * @return This builder.
+     * @see SmtpServerOptions#debugStream
      */
-    public SmtpServerBuilder withDebugStream(PrintStream debug) {
+    public SmtpServerBuilder withDebugStream(PrintStream stream) {
         if(options==null) { options = new SmtpServerOptions(); }
-        options.debug = debug;
+        options.debugStream = stream;
         return this;
     }
     
@@ -110,10 +115,24 @@ public class SmtpServerBuilder {
      *
      * @param str A simple connection answer or null.
      * @return This builder.
+     * @see SmtpServerOptions#connectionString
      */
     public SmtpServerBuilder withConnectionString(String str) {
         if(options==null) { options = new SmtpServerOptions(); }
         options.connectionString = str;
+        return this;
+    }
+
+    /**
+     * Defines a custom function to generate the {@link SmtpCommand.Type#EHLO} response.
+     *
+     * @param func The function to apply.
+     * @return This builder.
+     * @see SmtpServerOptions#ehloResponseFunction
+     */
+    public SmtpServerBuilder withEHLOResponseFunction(Function<String, String> func) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.ehloResponseFunction = func;
         return this;
     }
 
@@ -126,6 +145,7 @@ public class SmtpServerBuilder {
      * @return This builder.
      * @see PlainAuthenticationHandler#INSTANCE
      * @see LoginAuthenticationHandler#INSTANCE
+     * @see SmtpServerOptions#authenticators
      */
     public SmtpServerBuilder withAuthenticator(SmtpAuthenticatorHandler handler) {
         if(options==null) { options = new SmtpServerOptions(); }
@@ -141,6 +161,7 @@ public class SmtpServerBuilder {
      * @param password The associated password.
      * @return This builder.
      * @see SimpleUserRepository
+     * @see SmtpServerOptions#usersRepository
      */
     public SmtpServerBuilder withUser(String user, String password) {
         if(options==null) { options = new SmtpServerOptions(); }

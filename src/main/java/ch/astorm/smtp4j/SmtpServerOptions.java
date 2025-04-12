@@ -10,6 +10,7 @@ import ch.astorm.smtp4j.store.UserRepository;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Represents options of the {@link SmtpServer}.
@@ -37,7 +38,7 @@ public class SmtpServerOptions {
      * of the underlying SMTP protocol.
      * If {@code null}, then no debug will be printed.
      */
-    public PrintStream debug;
+    public PrintStream debugStream;
     
     /**
      * True if the {@link SmtpCommand.Type#STARTTLS} command must be accepted.
@@ -61,6 +62,12 @@ public class SmtpServerOptions {
      * String reply when a client connects to smtp4j.
      */
     public String connectionString = "localhost smtp4j server ready";
+
+    /**
+     * Function that generates the reply to the {@link SmtpCommand.Type#EHLO} command.
+     * The function input is the parameter sent by the client in the protocol and might be null.
+     */
+    public Function<String, String> ehloResponseFunction = h -> h!=null ? "smtp4j greets "+h : "OK";
 
     /**
      * List of {@link SmtpAuthenticatorHandler}.

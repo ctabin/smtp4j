@@ -17,7 +17,7 @@ This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with th
 - Improved multi-threading support
 - Up-to-date dependencies
 - Extended tests
-- Numerous bugfixes
+- Numerous bugfixes and features
 
 
 Here is the compatibility map of this API:

@@ -112,7 +112,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
         if(ehlo!=null) {
             if(ehlo.getType()==Type.EHLO) {
                 String param = ehlo.getParameter();
-                String greetings = param!=null ? "smtp4j greets "+ehlo.getParameter() : "OK";
+                String greetings = options.ehloResponseFunction.apply(param);
                 
                 List<String> replies = new ArrayList<>();
                 replies.add(greetings);
@@ -310,7 +310,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
             String line = input.readLine();
             if(line==null) { throw new SmtpProtocolException("Unexpected end of stream (no more line)"); }
             readData.add(line);
-            if(options.debug!=null) { options.debug.println("> "+line.trim()); }
+            if(options.debugStream!=null) { options.debugStream.println("> "+line.trim()); }
             return line;
         } catch(IOException ioe) {
             throw new SmtpProtocolException("I/O exception", ioe);
@@ -364,7 +364,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
         exchanges.add(exchange);
         readData.clear();
         
-        if(options.debug!=null) { options.debug.println("< "+builder.toString().trim()); }
+        if(options.debugStream!=null) { options.debugStream.println("< "+builder.toString().trim()); }
         stream.print(builder.toString());
         stream.flush();
     }

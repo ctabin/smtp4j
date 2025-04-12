@@ -48,6 +48,7 @@ public class SmtpServerMessageTest {
         SmtpServerBuilder builder = new SmtpServerBuilder();
         smtpServer = builder.
             withConnectionString("custom connection string").
+            withEHLOResponseFunction(r -> "welcome!").
             withStartTLSSupport(false).
             withSSLContextProvider(DefaultSSLContextProvider.selfSigned()).
             withDebugStream(System.err).
