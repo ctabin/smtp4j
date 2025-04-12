@@ -102,6 +102,18 @@ public class SmtpServerBuilder {
     }
     
     /**
+     * Defines a custom connection string when a new client connects.
+     *
+     * @param str A simple connection answer or null.
+     * @return This builder.
+     */
+    public SmtpServerBuilder withConnectionString(String str) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.connectionString = str;
+        return this;
+    }
+
+    /**
      * Defines the {@code SmtpMessageHandler} to be applied for the received messages.
      *
      * @param messageHandler The message handler.

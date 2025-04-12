@@ -11,7 +11,7 @@ Simple API to fake an SMTP server for Unit testing (and more).
 This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with the following improvements:
 - Dynamic port lookup
 - Support of MIME messages with attachments
-- Support of secure channel communication (STARTTLS)
+- Support of secure channel communication (`SMTPS` and `STARTTLS`)
 - Access to SMTP exchanges
 - Improved multi-threading support
 - Up-to-date dependencies

@@ -7,7 +7,8 @@ import ch.astorm.smtp4j.secure.SSLContextProvider;
 import java.io.PrintStream;
 
 /**
- * Represents options of the SMTP server.
+ * Represents options of the {@link SmtpServer}.
+ * Most of theses options can be set directly through the {@link SmtpServerBuilder}.
  */
 public class SmtpServerOptions {
     
@@ -50,4 +51,9 @@ public class SmtpServerOptions {
      * @see DefaultSSLContextProvider
      */
     public SSLContextProvider sslContextProvider;
+
+    /**
+     * String reply when a client connects to smtp4j.
+     */
+    public String connectionString = "localhost smtp4j server ready";
 }
