@@ -2,10 +2,14 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.SmtpServerOptions.Protocol;
+import ch.astorm.smtp4j.auth.LoginAuthenticationHandler;
+import ch.astorm.smtp4j.auth.PlainAuthenticationHandler;
+import ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
 import ch.astorm.smtp4j.secure.DefaultSSLContextProvider;
 import ch.astorm.smtp4j.secure.SSLContextProvider;
+import ch.astorm.smtp4j.store.SimpleUserRepository;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -80,7 +84,7 @@ public class SmtpServerBuilder {
      *
      * @param provider The provider.
      * @return This builder.
-     * @see DefaultSSLContextProvider
+     * @see DefaultSSLContextProvider#selfSigned()
      */
     public SmtpServerBuilder withSSLContextProvider(SSLContextProvider provider) {
         if(options==null) { options = new SmtpServerOptions(); }
@@ -110,6 +114,37 @@ public class SmtpServerBuilder {
     public SmtpServerBuilder withConnectionString(String str) {
         if(options==null) { options = new SmtpServerOptions(); }
         options.connectionString = str;
+        return this;
+    }
+
+    /**
+     * Adds the given {@code handler} to authenticate a client.
+     * This method can be called multiple times to allow many authentication schemes.
+     * Since the authentication will be required, you'll need to {@link #withUser(java.lang.String, java.lang.String) declare some users}.
+     *
+     * @param handler The authentication handler.
+     * @return This builder.
+     * @see PlainAuthenticationHandler#INSTANCE
+     * @see LoginAuthenticationHandler#INSTANCE
+     */
+    public SmtpServerBuilder withAuthenticator(SmtpAuthenticatorHandler handler) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.authenticators.add(handler);
+        return this;
+    }
+
+    /**
+     * Adds the given {@code user} to the repository.
+     * This method can be called multiple times to add users.
+     *
+     * @param user The username.
+     * @param password The associated password.
+     * @return This builder.
+     * @see SimpleUserRepository
+     */
+    public SmtpServerBuilder withUser(String user, String password) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.usersRepository.addUser(user, password);
         return this;
     }
 

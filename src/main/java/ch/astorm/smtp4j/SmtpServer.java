@@ -9,6 +9,8 @@ import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
 import ch.astorm.smtp4j.protocol.SmtpProtocolException;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
+import jakarta.mail.Authenticator;
+import jakarta.mail.PasswordAuthentication;
 import jakarta.mail.Session;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -125,17 +127,40 @@ public class SmtpServer implements AutoCloseable {
             props.put("mail."+protocol+".ssl.checkserveridentity", "false");
             props.put("mail."+protocol+".ssl.trust", "*");
         }
+        if(serverOptions.authenticators!=null && !serverOptions.authenticators.isEmpty()) {
+            props.put("mail."+protocol+".auth", "true");
+        }
         return props;
     }
     
     /**
      * Creates a new {@code Session} instance that will send messages to this server.
+     * This session has won't authenticate any user.
      * 
      * @return A new {@code Session} instance.
      * @see #getSessionProperties()
+     * @see #createAuthenticatedSession(java.lang.String, java.lang.String)
      */
     public Session createSession() {
         return Session.getInstance(getSessionProperties());
+    }
+
+    /**
+     * Creates a new {@code Session} instance that will send messages to this server
+     * which provides a user for the authentication.
+     *
+     * @param username The username.
+     * @param password The password.
+     * @return A new {@code Session} instance.
+     * @see #getSessionProperties()
+     */
+    public Session createAuthenticatedSession(String username, String password) {
+        return Session.getInstance(getSessionProperties(), new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(username, password);
+            }
+        });
     }
 
     /**

@@ -12,6 +12,7 @@ This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with th
 - Dynamic port lookup
 - Support of MIME messages with attachments
 - Support of secure channel communication (`SMTPS` and `STARTTLS`)
+- Support of `PLAIN` and `LOGIN` authentication schemes
 - Access to SMTP exchanges
 - Improved multi-threading support
 - Up-to-date dependencies
@@ -363,7 +364,7 @@ try(SmtpServer smtpServer = new SmtpServerBuilder().
 You'll have to create two different instances for each protocol or allow the `STARTTLS` command (see below).
 
 When the `SMTPS` protocol is used, the following SMTP properties are set when creating a new
-Session:
+`Session`:
 
 | Property | Value |
 | -------- | ----- |
@@ -398,7 +399,7 @@ try(SmtpServer smtpServer = new SmtpServerBuilder().
 ```
 
 When the `STARTTLS` support is enabled, the following SMTP properties are set when creating a new
-Session:
+`Session`:
 
 | Property | Value |
 | -------- | ----- |
@@ -410,6 +411,52 @@ Session:
 | `mail.smtp.starttls.required` | `true` |
 | `mail.smtp.ssl.checkserveridentity` | `false` |
 | `mail.smtp.ssl.trust` | `*` |
+
+### Authentication schemes
+
+The `PLAIN` and `LOGIN` authentication schemes are natively supported. Once an authentication scheme is added,
+it implies that at least one user is declared otherwise all the connections will be rejected.
+
+```java
+try(SmtpServer smtpServer = new SmtpServerBuilder().
+    withAuthenticator(PlainAuthenticationHandler.INSTANCE).
+    withUser("jdoe", "somePassword").
+    withPort(1025).
+    start()) {
+
+    MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer.createAuthenticatedSession("jdoe", "somePassword")).
+        from("source@smtp4j.local").
+        to("target@smtp4j.local").
+        subject("Message with multiple attachments").
+        body("Hello,\nThis is some content.\n\nBye.");
+
+    messageBuilder.send();
+
+    List<SmtpMessage> received = smtpServer.readReceivedMessages();
+    assertEquals(1, received.size());
+}
+```
+
+It is possible to support multiple authentication schemes and users:
+```java
+try(SmtpServer smtpServer = new SmtpServerBuilder().
+    withAuthenticator(PlainAuthenticationHandler.INSTANCE).
+    withAuthenticator(LoginAuthenticationHandler.INSTANCE).
+    withUser("jdoe", "somePassword").
+    withUser("asmith", "otherPassword").
+    withUser("mwindu", "customPasword").
+    withPort(1025).
+    start()) {
+    //...
+}
+```
+
+When at least one authentication scheme is declared, the `Session` created will contain
+the following properties:
+
+| Property | Value |
+| -------- | ----- |
+| `mail.smtp.auth` | `true` |
 
 ### Debugging Internals
 
@@ -460,7 +507,6 @@ Here are future developement ideas:
 - Mailbox support
 - 8BITMIME command
 - PIPELINING command
-- AUTH support
 
 Contributions are welcomed !
 
