@@ -2,6 +2,7 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.SmtpServerOptions.Protocol;
+import ch.astorm.smtp4j.auth.CramMD5AuthenticationHandler;
 import ch.astorm.smtp4j.auth.LoginAuthenticationHandler;
 import ch.astorm.smtp4j.auth.PlainAuthenticationHandler;
 import ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler;
@@ -145,6 +146,7 @@ public class SmtpServerBuilder {
      * @return This builder.
      * @see PlainAuthenticationHandler#INSTANCE
      * @see LoginAuthenticationHandler#INSTANCE
+     * @see CramMD5AuthenticationHandler#INSTANCE
      * @see SmtpServerOptions#authenticators
      */
     public SmtpServerBuilder withAuthenticator(SmtpAuthenticatorHandler handler) {

@@ -414,7 +414,7 @@ When the `STARTTLS` support is enabled, the following SMTP properties are set wh
 
 ### Authentication schemes
 
-The `PLAIN` and `LOGIN` authentication schemes are natively supported. Once an authentication scheme is added,
+The `PLAIN`, `LOGIN` and `CRAM-MD5` authentication schemes are natively supported. Once an authentication scheme is added,
 it implies that at least one user is declared otherwise all the connections will be rejected.
 
 ```java
