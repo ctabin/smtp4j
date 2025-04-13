@@ -158,6 +158,8 @@ public class SmtpServerBuilder {
     /**
      * Adds the given {@code user} to the repository.
      * This method can be called multiple times to add users.
+     * Users are not linked to mailboxes. They are only used in the context of
+     * the authentication.
      *
      * @param user The username.
      * @param password The associated password.

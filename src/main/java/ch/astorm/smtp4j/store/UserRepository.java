@@ -3,6 +3,8 @@ package ch.astorm.smtp4j.store;
 
 /**
  * Represents a user's repository.
+ * Users are not linked to mailboxes. They are essentially determining who can send
+ * messages to the SMTP server.
  */
 public interface UserRepository {
 
