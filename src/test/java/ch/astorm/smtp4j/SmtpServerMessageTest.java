@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -51,7 +50,6 @@ public class SmtpServerMessageTest {
             withEHLOResponseFunction(r -> "welcome!").
             withStartTLSSupport(false).
             withSSLContextProvider(DefaultSSLContextProvider.selfSigned()).
-            withDebugStream(System.err).
             withPort(1025).
             start();
     }

@@ -242,6 +242,11 @@ public class SmtpTransactionHandler implements AutoCloseable {
             } 
 
             if(recipients==null) {
+                if(commandType==Type.QUIT) {
+                    reply(SmtpProtocolConstants.CODE_QUIT, "goodbye");
+                    break;
+                }
+                
                 if(commandType!=Type.RECIPIENT) {
                     reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
                     continue;
