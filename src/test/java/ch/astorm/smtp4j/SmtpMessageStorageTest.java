@@ -20,7 +20,7 @@ public class SmtpMessageStorageTest {
     
     @Test
     public void testIterator() throws Exception {
-        ExecutorService service = Executors.newCachedThreadPool();
+        ExecutorService service = Executors.newFixedThreadPool(20); //cached thread pool results sometimes in hanging test
 
         Future<Integer> receiver;
         try(SmtpServer smtpServer = new SmtpServerBuilder().withPort(1025).start()) {
@@ -30,6 +30,7 @@ public class SmtpMessageStorageTest {
                     SmtpMessage msg = reader.readMessage();
                     while(msg!=null) {
                         ++counter;
+                        System.out.println("Received message counter: "+counter);
                         msg = reader.readMessage();
                     }
                 }
@@ -55,7 +56,9 @@ public class SmtpMessageStorageTest {
                 senders.add(service.submit(v));
             }
 
-            for(Future<Void> future : senders) { future.get(); }
+            for(Future<Void> future : senders) {
+                future.get();
+            }
             
             //wait for the last sockets to be handled by the receiver
             Thread.sleep(500);
