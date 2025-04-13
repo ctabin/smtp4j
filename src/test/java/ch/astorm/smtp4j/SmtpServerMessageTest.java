@@ -62,7 +62,7 @@ public class SmtpServerMessageTest {
     }
 
     @Test
-    public void testSimpleMessage() throws Exception {
+    public void testSimpleMessageUTF8() throws Exception {
         Session session = smtpServer.createSession();
         MimeMessage msg = new MimeMessage(session);
 
@@ -82,9 +82,46 @@ public class SmtpServerMessageTest {
         SmtpMessage message = received.get(0);
         assertEquals("from@local.host", message.getFrom());
         assertEquals("from@local.host", message.getSourceFrom());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
-        assertEquals(Arrays.asList("target3@local.host"), message.getRecipients(RecipientType.CC));
+        assertEquals(List.of("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
+        assertEquals(List.of("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target3@local.host"), message.getRecipients(RecipientType.CC));
+        assertTrue(message.getRecipients(RecipientType.BCC).isEmpty());
+        assertEquals("Subject éèôîï & Â%=", message.getSubject());
+        assertEquals("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", message.getBody());
+        assertTrue(message.getAttachments().isEmpty());
+        assertNotNull(message.getMimeMessage());
+        assertNotNull(message.getRawMimeContent());
+        
+        for(SmtpExchange e : message.getSmtpExchanges()) {
+            assertNotNull(e.getReceivedData());
+            assertNotNull(e.getRepliedData());
+        }
+    }
+    
+    @Test
+    public void testSimpleMessageISO88591() throws Exception {
+        Session session = smtpServer.createSession();
+        MimeMessage msg = new MimeMessage(session);
+
+        msg.setFrom(new InternetAddress("from@local.host"));
+        msg.addRecipient(RecipientType.TO, new InternetAddress("target1@local.host"));
+        msg.addRecipient(RecipientType.TO, new InternetAddress("target2@local.host"));
+        msg.addRecipient(RecipientType.CC, new InternetAddress("target3@local.host"));
+        msg.addRecipient(RecipientType.BCC, new InternetAddress("target4@local.host"));
+        msg.setSubject("Subject éèôîï & Â%=", StandardCharsets.ISO_8859_1.name());
+        msg.setText("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", StandardCharsets.ISO_8859_1.name());
+
+        Transport.send(msg);
+
+        List<SmtpMessage> received = smtpServer.readReceivedMessages();
+        assertEquals(1, received.size());
+
+        SmtpMessage message = received.get(0);
+        assertEquals("from@local.host", message.getFrom());
+        assertEquals("from@local.host", message.getSourceFrom());
+        assertEquals(List.of("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
+        assertEquals(List.of("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target3@local.host"), message.getRecipients(RecipientType.CC));
         assertTrue(message.getRecipients(RecipientType.BCC).isEmpty());
         assertEquals("Subject éèôîï & Â%=", message.getSubject());
         assertEquals("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", message.getBody());
@@ -114,8 +151,8 @@ public class SmtpServerMessageTest {
         assertEquals(1, received.size());
 
         SmtpMessage message = received.get(0);
-        assertEquals(Arrays.asList("target1to@local.host", "Cédric 2 TO <target2@smtp4j.local>","another-targer@smtp4j.local","anotherTo@smtp4j.local"), message.getRecipients(RecipientType.TO));
-        assertEquals(Arrays.asList("target1cc@local.host", "Rôgë 2 CC <target2@smtp4j.local>"), message.getRecipients(RecipientType.CC));
+        assertEquals(List.of("target1to@local.host", "Cédric 2 TO <target2@smtp4j.local>","another-targer@smtp4j.local","anotherTo@smtp4j.local"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target1cc@local.host", "Rôgë 2 CC <target2@smtp4j.local>"), message.getRecipients(RecipientType.CC));
     }
     
     @Test
@@ -136,9 +173,9 @@ public class SmtpServerMessageTest {
         SmtpMessage message = received.get(0);
         assertEquals("from@local.host", message.getFrom());
         assertEquals("from@local.host", message.getSourceFrom());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
-        assertEquals(Arrays.asList("target3@local.host"), message.getRecipients(RecipientType.CC));
+        assertEquals(List.of("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
+        assertEquals(List.of("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target3@local.host"), message.getRecipients(RecipientType.CC));
         assertTrue(message.getRecipients(RecipientType.BCC).isEmpty());
         assertEquals("Subject éèôîï & Â%=", message.getSubject());
         assertEquals("Hello,\r\nThis is sôme CON=TENT with Spe$ial Ch@rs\r\nBye.", message.getBody());
@@ -168,9 +205,9 @@ public class SmtpServerMessageTest {
         SmtpMessage message = received.get(0);
         assertEquals("from@local.host", message.getFrom());
         assertEquals("from@local.host", message.getSourceFrom());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
-        assertEquals(Arrays.asList("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
-        assertEquals(Arrays.asList("target3@local.host"), message.getRecipients(RecipientType.CC));
+        assertEquals(List.of("target1@local.host","target2@local.host","target3@local.host","target4@local.host"), message.getSourceRecipients());
+        assertEquals(List.of("target1@local.host","target2@local.host"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target3@local.host"), message.getRecipients(RecipientType.CC));
         assertTrue(message.getRecipients(RecipientType.BCC).isEmpty());
         assertEquals(new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").parse("31.12.2020 23:59:59"), message.getSentDate());
         assertEquals("Subject éèôîï & Â%=", message.getSubject());
@@ -213,8 +250,8 @@ public class SmtpServerMessageTest {
         SmtpMessage message = received.get(0);
         assertEquals("Cédric <info@smtp4j.local>", message.getFrom());
         assertEquals("info@smtp4j.local", message.getSourceFrom());
-        assertEquals(Arrays.asList("Méphisto <user_daemon@underground.local>"), message.getRecipients(RecipientType.TO));
-        assertEquals(Arrays.asList("user_daemon@underground.local"), message.getSourceRecipients());
+        assertEquals(List.of("Méphisto <user_daemon@underground.local>"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("user_daemon@underground.local"), message.getSourceRecipients());
         assertTrue(message.getRecipients(RecipientType.CC).isEmpty());
         assertEquals("Here is your _list_ of *SOULS*", message.getSubject());
         assertEquals(sentDate, message.getSentDate());
@@ -373,7 +410,7 @@ public class SmtpServerMessageTest {
         SmtpMessage message = received.get(0);
 
         assertEquals("info@smtp4j.local", message.getFrom());
-        assertEquals(Arrays.asList("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
         assertEquals("Hi buddy", message.getSubject());
         assertNull(message.getBody());
 
@@ -421,7 +458,7 @@ public class SmtpServerMessageTest {
         SmtpMessage message = received.get(0);
 
         assertEquals("info@smtp4j.local", message.getFrom());
-        assertEquals(Arrays.asList("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
+        assertEquals(List.of("target@smtp4j.local"), message.getRecipients(RecipientType.TO));
         assertEquals("Hi buddy", message.getSubject());
         assertEquals("Content BODY1\r\nContent BODY2", message.getBody());
 

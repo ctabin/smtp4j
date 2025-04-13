@@ -505,15 +505,6 @@ The output will be like this:
 < 221 goodbye
 ```
 
-### Developements & ideas
-
-Here are future developement ideas:
-- Mailbox support
-- 8BITMIME command
-- PIPELINING command
-
-Contributions are welcomed !
-
 ## Donate
 
 This project is completely developed during my spare time.

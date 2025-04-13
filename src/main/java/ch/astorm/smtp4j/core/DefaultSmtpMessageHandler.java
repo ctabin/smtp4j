@@ -71,7 +71,7 @@ public class DefaultSmtpMessageHandler implements SmtpMessageHandler {
         synchronized(messages) {
             if(messages.isEmpty() && delayIfNoMessage>=0) {
                 try { messages.wait(TimeUnit.MILLISECONDS.convert(delayIfNoMessage, unit)); }
-                catch(InterruptedException ie) { }
+                catch(InterruptedException ie) { /* ignored */ }
             }
             
             if(messages.isEmpty()) {

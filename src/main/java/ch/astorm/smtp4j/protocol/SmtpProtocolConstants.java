@@ -34,7 +34,7 @@ public class SmtpProtocolConstants {
      * Data dot-line separator.
      * See the <a href="https://datatracker.ietf.org/doc/html/rfc2821#section-3.3">specification</a>.
      */
-    public static String DOT = ".";
+    public static char DOT = '.';
 
     /**
      * Code of the first reply of the SMTP server.

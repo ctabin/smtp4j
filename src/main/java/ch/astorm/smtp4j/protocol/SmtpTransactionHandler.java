@@ -8,10 +8,10 @@ import ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler;
 import ch.astorm.smtp4j.auth.SmtpExchangeHandler;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
-import java.io.BufferedReader;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -34,7 +34,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
     private Socket socket;
     private InputStream socketInputStream;
     private OutputStream socketOutputStream;
-    private BufferedReader input;
+    private SmtpBufferedInputStream input;
     private PrintWriter output;
     
     /**
@@ -64,7 +64,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
         this.socket = socket;
         this.socketInputStream = socket.getInputStream();
         this.socketOutputStream = socket.getOutputStream();
-        this.input = new BufferedReader(new InputStreamReader(socketInputStream, StandardCharsets.US_ASCII));
+        this.input = new SmtpBufferedInputStream(socketInputStream);
         this.output = new PrintWriter(new OutputStreamWriter(socketOutputStream, StandardCharsets.US_ASCII));
     }
     
@@ -116,7 +116,13 @@ public class SmtpTransactionHandler implements AutoCloseable {
                 
                 List<String> replies = new ArrayList<>();
                 replies.add(greetings);
-                if(supportsStartTls) { replies.add("STARTTLS"); }
+                
+                replies.add("SMTPUTF8");
+                replies.add("8BITMIME");
+                
+                if(supportsStartTls) {
+                    replies.add("STARTTLS");
+                }
 
                 if(requireClientAuthentication) {
                     String authSchemes = options.authenticators.stream().map(s -> s.getName()).reduce((a, b) -> a+" "+b).get();
@@ -211,7 +217,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
 
     private String mailFrom;
     private List<String> recipients;
-    private StringBuilder smtpMessageContent;
+    private ByteArrayOutputStream smtpMessageContent;
     
     private final List<String> readData = new ArrayList<>(64);
     private final List<SmtpExchange> exchanges = new ArrayList<>(32);
@@ -258,16 +264,19 @@ public class SmtpTransactionHandler implements AutoCloseable {
                     continue;
                 }
 
-                smtpMessageContent = new StringBuilder(256);
+                smtpMessageContent = new ByteArrayOutputStream(256);
                 reply(SmtpProtocolConstants.CODE_INTERMEDIATE_REPLY, "Start mail input; end with <CRLF>.<CRLF>");
 
                 boolean hasFailure = false;
-                String currentLine = nextLine();
+                byte[] currentLine = nextLineRaw();
                 while(currentLine!=null) {
                     //DATA content must end with a dot on a single line
-                    if(currentLine.equals(SmtpProtocolConstants.DOT)) {
-                        smtpMessageContent.delete(smtpMessageContent.length()-SmtpProtocolConstants.CRLF.length(), smtpMessageContent.length());
-                        SmtpMessage message = SmtpMessage.create(mailFrom, recipients, smtpMessageContent.toString(), new ArrayList<>(exchanges));
+                    if(currentLine.length==1 && currentLine[0]==SmtpProtocolConstants.DOT) {
+                        byte[] smtpContent = smtpMessageContent.toByteArray();
+                        byte[] trimmedSmtpContent = new byte[smtpContent.length-SmtpProtocolConstants.CRLF.length()];
+                        System.arraycopy(smtpContent, 0, trimmedSmtpContent, 0, smtpContent.length-SmtpProtocolConstants.CRLF.length());
+                        
+                        SmtpMessage message = SmtpMessage.create(mailFrom, recipients, trimmedSmtpContent, new ArrayList<>(exchanges));
                         try {
                             messageReceiver.receiveMessage(message);
                             resetState();
@@ -278,12 +287,18 @@ public class SmtpTransactionHandler implements AutoCloseable {
                         
                         break;
                     } else {
-                        //if DATA starts with a dot, a second one must be added
-                        if(currentLine.startsWith(SmtpProtocolConstants.DOT)) { currentLine = currentLine.substring(1); }
-                        smtpMessageContent.append(currentLine).append(SmtpProtocolConstants.CRLF);
+                        //if DATA starts with a dot, a second one must be added to represent it, so we strip the first one
+                        if(currentLine.length>0 && currentLine[0]==SmtpProtocolConstants.DOT) {
+                            byte[] stripped = new byte[currentLine.length-1];
+                            System.arraycopy(currentLine, 1, stripped, 0, currentLine.length-1);
+                            currentLine = stripped;
+                        }
+                        
+                        smtpMessageContent.writeBytes(currentLine);
+                        smtpMessageContent.writeBytes(SmtpProtocolConstants.CRLF.getBytes(StandardCharsets.US_ASCII));
                     }
 
-                    currentLine = nextLine();
+                    currentLine = nextLineRaw();
                 }
 
                 if(!hasFailure) { reply(SmtpProtocolConstants.CODE_OK, "OK"); }
@@ -305,16 +320,23 @@ public class SmtpTransactionHandler implements AutoCloseable {
         this.smtpMessageContent = null;
     }
 
-    private String nextLine() throws SmtpProtocolException {
+    private byte[] nextLineRaw() throws SmtpProtocolException {
         try {
-            String line = input.readLine();
+            byte[] line = input.readLine();
             if(line==null) { throw new SmtpProtocolException("Unexpected end of stream (no more line)"); }
-            readData.add(line);
-            if(options.debugStream!=null) { options.debugStream.println("> "+line.trim()); }
+            
+            String lineStr = new String(line, StandardCharsets.US_ASCII);
+            readData.add(lineStr);
+            if(options.debugStream!=null) { options.debugStream.println("> "+lineStr); }
+            
             return line;
         } catch(IOException ioe) {
             throw new SmtpProtocolException("I/O exception", ioe);
         }
+    }
+    
+    private String nextLine() throws SmtpProtocolException {
+        return new String(nextLineRaw(), StandardCharsets.US_ASCII);
     }
     
     private final List<SmtpCommand> stackedCommands = new ArrayList<>();
@@ -367,5 +389,58 @@ public class SmtpTransactionHandler implements AutoCloseable {
         if(options.debugStream!=null) { options.debugStream.println("< "+builder.toString().trim()); }
         stream.print(builder.toString());
         stream.flush();
+    }
+}
+
+class SmtpBufferedInputStream extends BufferedInputStream {
+    public SmtpBufferedInputStream(InputStream in) {
+        super(in);
+    }
+
+    /**
+     * Read the next line as raw bytes.
+     *
+     * @return The next line or null if EOF.
+     */
+    public byte[] readLine() throws IOException {
+        byte[] buffer = null;
+        int currentSize = 0;
+        
+        int c = super.read();
+        while(c>=0) {
+            //guard when buffer is full and a new line / EOF has not been reached
+            if(buffer==null || currentSize>=buffer.length) {
+                if(buffer!=null) {
+                    byte[] newBuffer = new byte[buffer.length*2];
+                    System.arraycopy(buffer, 0, newBuffer, 0, buffer.length);
+                    buffer = newBuffer;
+                } else {
+                    buffer = new byte[1024];
+                }
+            }
+            
+            buffer[currentSize] = (byte)c;
+            ++currentSize;
+            
+            //when CRLF at the end of the buffer, remove them and exit the loop
+            if(currentSize>1 && buffer[currentSize-2]=='\r' && buffer[currentSize-1]=='\n') {
+                currentSize -= 2;
+                
+                //special case when only a CRLF is read, it is not the end of the stream
+                if(currentSize==0) { return new byte[0]; }
+                else { break; }
+            }
+            
+            c = super.read();
+        }
+        
+        //stream complete, nothing to read
+        if(currentSize<=0) {
+            return null;
+        }
+        
+        byte[] copy = new byte[currentSize];
+        System.arraycopy(buffer, 0, copy, 0, currentSize);
+        return copy;
     }
 }

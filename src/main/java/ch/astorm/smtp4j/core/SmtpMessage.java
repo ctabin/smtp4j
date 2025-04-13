@@ -1,7 +1,6 @@
 
 package ch.astorm.smtp4j.core;
 
-import ch.astorm.smtp4j.protocol.SmtpCommand;
 import ch.astorm.smtp4j.protocol.SmtpCommand.Type;
 import ch.astorm.smtp4j.protocol.SmtpExchange;
 import ch.astorm.smtp4j.protocol.SmtpProtocolConstants;
@@ -242,14 +241,14 @@ public class SmtpMessage {
      *
      * @param from The source {@code From} parameter value.
      * @param recipients The source {@code Rcpt} parameter values.
-     * @param mimeMessageStr The {@code MimeMessage} content.
+     * @param mimeMessageContent The {@code MimeMessage} content.
      * @param exchanges The raw SMTP exchanges of this message.
      * @return A new {@code SmtpMessage} instance.
      */
-    public static SmtpMessage create(String from, List<String> recipients, String mimeMessageStr, List<SmtpExchange> exchanges) {
+    public static SmtpMessage create(String from, List<String> recipients, byte[] mimeMessageContent, List<SmtpExchange> exchanges) {
         MimeMessage mimeMessage;
-        try(InputStream is = new ByteArrayInputStream(mimeMessageStr.getBytes(StandardCharsets.UTF_8))) { mimeMessage = new MimeMessage(SESSION, is); }
+        try(InputStream is = new ByteArrayInputStream(mimeMessageContent)) { mimeMessage = new MimeMessage(SESSION, is); }
         catch(IOException | MessagingException e) { throw new RuntimeException("Unable to create MimeMessage from content", e); }
-        return new SmtpMessage(from, recipients, mimeMessage, mimeMessageStr, exchanges);
+        return new SmtpMessage(from, recipients, mimeMessage, new String(mimeMessageContent, StandardCharsets.UTF_8), exchanges);
     }
 }
