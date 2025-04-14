@@ -399,8 +399,21 @@ try(SmtpServer smtpServer = new SmtpServerBuilder().
 }
 ```
 
-When the `STARTTLS` support is enabled, the following SMTP properties are set when creating a new
-`Session`:
+By default, once TLS support is activated, the `STARTTLS` command is required from the client. It is possible
+to still allow plain text exchanges with the following code snipped:
+
+```java
+try(SmtpServer smtpServer = new SmtpServerBuilder().
+      withStartTLSSupport(true).
+      withStartTLSRequired(false).
+      withSSLContextProvider(DefaultSSLContextProvider.selfSigned()).
+      withPort(1025).
+      start()) {
+  //...
+}
+```
+
+When the `STARTTLS` support is enabled, the following SMTP properties are set when creating a new `Session`:
 
 | Property | Value |
 | -------- | ----- |

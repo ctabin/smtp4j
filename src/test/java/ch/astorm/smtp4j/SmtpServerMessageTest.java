@@ -8,6 +8,7 @@ import ch.astorm.smtp4j.secure.DefaultSSLContextProvider;
 import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import jakarta.activation.DataHandler;
 import jakarta.mail.Message.RecipientType;
+import jakarta.mail.MessagingException;
 import jakarta.mail.Multipart;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
@@ -502,7 +503,8 @@ public class SmtpServerMessageTest {
     
     @Test
     public void testEnabledStartTLS() throws Exception {
-        smtpServer.getOptions().starttls = true;
+        smtpServer.getOptions().startTLS = true;
+        
         try {
             MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
                 from("source@smtp4j.local").
@@ -513,7 +515,52 @@ public class SmtpServerMessageTest {
             messageBuilder.send();
             assertEquals(1, smtpServer.readReceivedMessages().size());
         } finally {
-            smtpServer.getOptions().starttls = false;
+            smtpServer.getOptions().startTLS = false;
+        }
+    }
+    
+    @Test
+    public void testRequiredStartTLS() throws Exception {
+        smtpServer.getOptions().startTLS = true;
+        
+        try {
+            Properties props = smtpServer.getSessionProperties();
+            props.put("mail.smtp.starttls.enable", "false");
+            props.put("mail.smtp.starttls.required", "false");
+            
+            MimeMessageBuilder messageBuilder = new MimeMessageBuilder(Session.getInstance(props)).
+                from("source@smtp4j.local").
+                to("target@smtp4j.local").
+                subject("Subject").
+                body("Message");
+
+            assertThrows(MessagingException.class, () -> messageBuilder.send());
+        } finally {
+            smtpServer.getOptions().startTLS = false;
+        }
+    }
+    
+    @Test
+    public void testNotRequiredStartTLS() throws Exception {
+        smtpServer.getOptions().startTLS = true;
+        smtpServer.getOptions().requireTLS = false;
+        
+        try {
+            Properties props = smtpServer.getSessionProperties();
+            props.put("mail.smtp.starttls.enable", "false");
+            props.put("mail.smtp.starttls.required", "false");
+            
+            MimeMessageBuilder messageBuilder = new MimeMessageBuilder(Session.getInstance(props)).
+                from("source@smtp4j.local").
+                to("target@smtp4j.local").
+                subject("Subject").
+                body("Message");
+
+            messageBuilder.send();
+            assertEquals(1, smtpServer.readReceivedMessages().size());
+        } finally {
+            smtpServer.getOptions().startTLS = false;
+            smtpServer.getOptions().requireTLS = true;
         }
     }
 }

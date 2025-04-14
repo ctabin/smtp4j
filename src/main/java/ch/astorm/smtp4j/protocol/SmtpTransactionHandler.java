@@ -107,7 +107,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
         boolean requireClientAuthentication = options.authenticators!=null && !options.authenticators.isEmpty();
 
         //extends the EHLO/HELO command to greet the client
-        boolean supportsStartTls = options.starttls && !secureChannel;
+        boolean supportsStartTls = options.startTLS && !secureChannel;
         SmtpCommand ehlo = SmtpCommand.parse(nextLine());
         if(ehlo!=null) {
             if(ehlo.getType()==Type.EHLO) {
@@ -122,6 +122,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
                 
                 if(supportsStartTls) {
                     replies.add("STARTTLS");
+                    if(options.requireTLS) { replies.add("REQUIRETLS"); }
                 }
 
                 if(requireClientAuthentication) {
@@ -152,6 +153,9 @@ public class SmtpTransactionHandler implements AutoCloseable {
 
                 reply(plainStream, SmtpProtocolConstants.CODE_CONNECT, "Go ahead", SmtpProtocolConstants.SP_FINAL);
                 execute();
+                return;
+            } else if(options.requireTLS) {
+                reply(SmtpProtocolConstants.CODE_ENCRYPTION_NEEDED, "STARTTLS is mandatory");
                 return;
             } else {
                 //it is not a STARTTLS command, stack it for the transaction

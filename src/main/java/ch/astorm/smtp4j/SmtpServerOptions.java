@@ -44,7 +44,15 @@ public class SmtpServerOptions {
      * True if the {@link SmtpCommand.Type#STARTTLS} command must be accepted.
      * In the client sends it, it will be still unsupported.
      */
-    public boolean starttls = false;
+    public boolean startTLS = false;
+    
+    /**
+     * True if the TLS secure layer must be asked once connected. This value has impact
+     * only when {@link #startTLS} is set to {@code true}.
+     * If this value is true, then plain connections that do not switch to secure transport
+     * layer with {@code STARTTLS} will be rejected.
+     */
+    public boolean requireTLS = true;
     
     /**
      * The protocol to use.
