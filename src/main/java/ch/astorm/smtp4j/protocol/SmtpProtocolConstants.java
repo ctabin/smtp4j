@@ -107,6 +107,11 @@ public class SmtpProtocolConstants {
     public static final int CODE_AUTHENTICATION_FAILURE = 535;
 
     /**
+     * Error code when storage allocation exceeded.
+     */
+    public static final int CODE_STORAGE_EXCEEDED = 552;
+    
+    /**
      * Error code when a transaction has failed.
      */
     public static final int CODE_TRANSACTION_FAILED = 554;

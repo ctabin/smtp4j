@@ -76,6 +76,18 @@ public class SmtpServerOptions {
      * The function input is the parameter sent by the client in the protocol and might be null.
      */
     public Function<String, String> ehloResponseFunction = h -> h!=null ? "smtp4j greets "+h : "OK";
+    
+    /**
+     * The maximum message size (in bytes). A value less or equal than zero disables
+     * the message size verification.
+     * 
+     * As per <a href="https://datatracker.ietf.org/doc/html/rfc1870">RFC1870</a>,
+     * the message size is defined as the number of octets, including CR-LF
+     * pairs, but not the SMTP DATA command's terminating dot or doubled
+     * quoting dots, to be transmitted by the SMTP client after receiving
+     * reply code 354 to the DATA command.
+     */
+    public int maxMessageSize = -1;
 
     /**
      * List of {@link SmtpAuthenticatorHandler}.

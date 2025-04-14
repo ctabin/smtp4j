@@ -89,6 +89,14 @@ public class SmtpTransactionHandler implements AutoCloseable {
     }
     
     private void execute() throws SmtpProtocolException {
+        try {
+            executeInternal();
+        } catch(SmtpMessageSizeExceededException sizeException) {
+            reply(SmtpProtocolConstants.CODE_STORAGE_EXCEEDED, "Message size exceeded");
+        }
+    }
+    
+    private void executeInternal() throws SmtpProtocolException {
         if(!secureChannel) {
             if(options.protocol==Protocol.SMTPS) {
                 try { upgradeToTLSSocket(); }
@@ -96,7 +104,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
 
                 reply(SmtpProtocolConstants.CODE_CONNECT, options.connectionString);
 
-                execute();
+                executeInternal();
                 return;
             }
 
@@ -130,6 +138,11 @@ public class SmtpTransactionHandler implements AutoCloseable {
                     replies.add("AUTH "+authSchemes);
                 }
                 
+                if(options.maxMessageSize>0) {
+                    replies.add("SIZE "+options.maxMessageSize);
+                    input.setSizeLimit(options.maxMessageSize);
+                }
+                
                 reply(SmtpProtocolConstants.CODE_OK, replies);
             } else {
                 reply(SmtpProtocolConstants.CODE_BAD_COMMAND_SEQUENCE, "Bad sequence of command (wrong command)");
@@ -152,7 +165,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
                 }
 
                 reply(plainStream, SmtpProtocolConstants.CODE_CONNECT, "Go ahead", SmtpProtocolConstants.SP_FINAL);
-                execute();
+                executeInternal();
                 return;
             } else if(options.requireTLS) {
                 reply(SmtpProtocolConstants.CODE_ENCRYPTION_NEEDED, "STARTTLS is mandatory");
@@ -212,9 +225,7 @@ public class SmtpTransactionHandler implements AutoCloseable {
         this.initSocket(sslSocket, true);
     }
 
-    private static class InternalExchangeHandler implements SmtpExchangeHandler {
-        private final SmtpTransactionHandler sth;
-        private InternalExchangeHandler(SmtpTransactionHandler sth) { this.sth = sth; }
+    private static record InternalExchangeHandler(SmtpTransactionHandler sth) implements SmtpExchangeHandler {
         @Override public String nextLine() throws SmtpProtocolException { return sth.nextLine(); }
         @Override public void reply(int code, String message) { sth.reply(code, message); }
     }
@@ -275,7 +286,9 @@ public class SmtpTransactionHandler implements AutoCloseable {
 
                 smtpMessageContent = new ByteArrayOutputStream(256);
                 reply(SmtpProtocolConstants.CODE_INTERMEDIATE_REPLY, "Start mail input; end with <CRLF>.<CRLF>");
-
+                
+                input.setByteCounterEnabled(true);
+                
                 boolean hasFailure = false;
                 byte[] currentLine = nextLineRaw();
                 while(currentLine!=null) {
@@ -310,6 +323,8 @@ public class SmtpTransactionHandler implements AutoCloseable {
                     currentLine = nextLineRaw();
                 }
 
+                input.setByteCounterEnabled(false);
+                
                 if(!hasFailure) { reply(SmtpProtocolConstants.CODE_OK, "OK"); }
                 continue;
             }
@@ -401,17 +416,36 @@ public class SmtpTransactionHandler implements AutoCloseable {
     }
 }
 
+class SmtpMessageSizeExceededException extends SmtpProtocolException {
+    public SmtpMessageSizeExceededException() { super("Message size limite exceeded"); }
+}
+
 class SmtpBufferedInputStream extends BufferedInputStream {
+    private int sizeLimit = -1;
+    private int readByteCounter = 0;
+    private boolean readByteUpdate = true;
+    
     public SmtpBufferedInputStream(InputStream in) {
         super(in);
     }
 
+    /*
+    https://datatracker.ietf.org/doc/html/rfc1870 - point 5
+    
+    The message size is defined as the number of octets, including CR-LF
+    pairs, but not the SMTP DATA command's terminating dot or doubled
+    quoting dots, to be transmitted by the SMTP client after receiving
+    reply code 354 to the DATA command.
+    */
+    public void setByteCounterEnabled(boolean enabled) { this.readByteUpdate = enabled; }
+    public void setSizeLimit(int limit) { this.sizeLimit = limit; }
+    
     /**
      * Read the next line as raw bytes.
      *
      * @return The next line or null if EOF.
      */
-    public byte[] readLine() throws IOException {
+    public byte[] readLine() throws IOException, SmtpMessageSizeExceededException {
         byte[] buffer = null;
         int currentSize = 0;
         
@@ -430,6 +464,13 @@ class SmtpBufferedInputStream extends BufferedInputStream {
             
             buffer[currentSize] = (byte)c;
             ++currentSize;
+            
+            if(readByteUpdate) {
+                ++readByteCounter;
+                if(sizeLimit>0 && sizeLimit<readByteCounter) {
+                    throw new SmtpMessageSizeExceededException();
+                }
+            }
             
             //when CRLF at the end of the buffer, remove them and exit the loop
             if(currentSize>1 && buffer[currentSize-2]=='\r' && buffer[currentSize-1]=='\n') {

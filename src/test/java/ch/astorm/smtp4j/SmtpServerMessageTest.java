@@ -485,6 +485,23 @@ public class SmtpServerMessageTest {
     }
     
     @Test
+    public void testMessageSizeLimit() throws Exception {
+        smtpServer.getOptions().maxMessageSize = 5;
+        try {
+            String text = "This méssage is too long.";
+            MimeMessageBuilder messageBuilder = new MimeMessageBuilder(smtpServer).
+                from("source@smtp4j.local").
+                to("target@smtp4j.local").
+                subject("A simple subject").
+                body(text);
+
+            assertThrows(MessagingException.class, () -> messageBuilder.send());
+        } finally {
+            smtpServer.getOptions().maxMessageSize = -1;
+        }
+    }
+    
+    @Test
     public void testDisabledStartTLS() throws Exception {
         Properties props = smtpServer.getSessionProperties();
         props.put("mail.smtp.starttls.enable", "true");

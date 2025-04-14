@@ -113,6 +113,20 @@ public class SmtpServerBuilder {
     }
     
     /**
+     * Defines the maximum message size (in bytes). A value less or equal than zero
+     * disables the size limit. By default, there is no message limit.
+     *
+     * @param limit The size limit in bytes.
+     * @return This builder.
+     * @see SmtpServerOptions#maxMessageSize
+     */
+    public SmtpServerBuilder withMaxMessageSize(int limit) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.maxMessageSize = limit;
+        return this;
+    }
+    
+    /**
      * Defines the {@link PrintStream} to use for debugging.If null, then no debug
      * output will be printed.
      *

@@ -13,6 +13,7 @@ This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with th
 - Support of MIME messages with attachments
 - Support of secure channel communication (`SMTPS` and `STARTTLS`)
 - Support of `PLAIN`,`LOGIN` and `CRAM-MD5` authentication schemes
+- Support of message size limit
 - Access to SMTP exchanges
 - Improved multi-threading support
 - Up-to-date dependencies
@@ -338,6 +339,16 @@ SmtpMessageHandler myCustomHandler = new CustomSmtpMessageHandler();
 SmtpServerBuilder builder = new SmtpServerBuilder();
 try(SmtpServer server = builder.withMessageHandler(myCustomHandler).start()) {
     //...
+}
+```
+
+#### Message size limit
+
+It is possible configure smtp4j to reject messages that exceed a given size.
+
+```java
+try(SmtpServer server = builder.withMaxMessageSize(1024).start()) {
+  //...
 }
 ```
 
