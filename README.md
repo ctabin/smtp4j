@@ -26,7 +26,8 @@ Here is the compatibility map of this API:
 | -------- | ------------------ | ---------
 | <= 1.2.2 | JDK 8 and upwards  | `javax`
 | >= 2.0.0 | JDK 11 and upwards | `jakarta`
-
+| >= 3.0.0 | JDK 11 and upwards | `jakarta`
+| >= 4.0.0 | JDK 21 and upwards | `jakarta`
 
 ## Installation (maven)
 
