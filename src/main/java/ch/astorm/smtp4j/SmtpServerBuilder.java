@@ -55,17 +55,32 @@ public class SmtpServerBuilder {
     }
     
     /**
-     * Defines if the {@code STARTTLS} support is enabled (false by default).
-     * If true, then a {@link #withSSLContextProvider(ch.astorm.smtp4j.secure.SSLContextProvider) SSL context provider}
+     * Defines if the {@code STARTTLS} support is enabled (false by default).If true,
+     * then a {@link #withSSLContextProvider(ch.astorm.smtp4j.secure.SSLContextProvider) SSL context provider}
      * must be set.
      *
      * @param startTlsSupport True if the {@code STARTTLS} support must be enabled.
      * @return This builder.
-     * @see SmtpServerOptions#starttls
+     * @see SmtpServerOptions#startTLS
      */
     public SmtpServerBuilder withStartTLSSupport(boolean startTlsSupport) {
         if(options==null) { options = new SmtpServerOptions(); }
-        options.starttls = startTlsSupport;
+        options.startTLS = startTlsSupport;
+        return this;
+    }
+    
+    /**
+     * Defines if secure transport layer is required.
+     * This value is used only when {@link #withStartTLSRequired(boolean) TLS support}
+     * is enabled.
+     * 
+     * @param tlsRequired True if {@code STARTTLS} is required once connected.
+     * @return This builder.
+     * @see SmtpServerOptions#requireTLS
+     */
+    public SmtpServerBuilder withStartTLSRequired(boolean tlsRequired) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.requireTLS = tlsRequired;
         return this;
     }
 

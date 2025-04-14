@@ -119,11 +119,11 @@ public class SmtpServer implements AutoCloseable {
         props.setProperty("mail.transport.protocol.rfc822", protocol);
         props.setProperty("mail."+protocol+".host", "localhost");
         props.setProperty("mail."+protocol+".port", ""+port);
-        if(serverOptions.starttls) {
+        if(serverOptions.startTLS) {
             props.put("mail."+protocol+".starttls.enable", "true");
             props.put("mail."+protocol+".starttls.required", "true");
         }
-        if(serverOptions.starttls || serverOptions.protocol==Protocol.SMTPS) {
+        if(serverOptions.startTLS || serverOptions.protocol==Protocol.SMTPS) {
             props.put("mail."+protocol+".ssl.checkserveridentity", "false");
             props.put("mail."+protocol+".ssl.trust", "*");
         }

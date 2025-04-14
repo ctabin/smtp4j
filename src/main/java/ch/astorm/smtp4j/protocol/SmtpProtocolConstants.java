@@ -92,6 +92,11 @@ public class SmtpProtocolConstants {
     public static final int CODE_BAD_AUTHENTICATION_SCHEME = 504;
     
     /**
+     * Error code when secure communication must be used.
+     */
+    public static final int CODE_ENCRYPTION_NEEDED = 523;
+    
+    /**
      * Error code when authentication is required.
      */
     public static final int CODE_AUTHENTICATION_REQUIRED = 530;
