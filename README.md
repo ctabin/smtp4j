@@ -38,7 +38,7 @@ Use the following dependency in your `pom.xml`:
 <dependency>
     <groupId>ch.astorm</groupId>
     <artifactId>smtp4j</artifactId>
-    <version>3.1.3</version>
+    <version>4.0.0</version>
 </dependency>
 ```
 
