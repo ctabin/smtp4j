@@ -18,8 +18,10 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -36,11 +38,11 @@ public class SmtpServer implements AutoCloseable {
     private final SmtpMessageHandler messageHandler;
     private final ReentrantLock messageHandlerLock;
     private final List<SmtpServerListener> listeners;
-    private final ThreadFactory threadFactory;
+    private final ExecutorService executor;
     
     private volatile SmtpServerOptions serverOptions;
     private volatile ServerSocket serverSocket;
-    private Thread localThread;
+    private Future<?> runningServer;
 
     /**
      * Default SMTP port.
@@ -72,13 +74,13 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      * @param messageHandler The {@code SmtpMessageHandler} used to receive messages or null to
      *             use a new {@link DefaultSmtpMessageHandler} instance.
-     * @param threadFactory The {@link ThreadFactory} to use.
+     * @param executor The {@link ExecutorService} to use or null. If null, {@link Executors#newSingleThreadExecutor()} will be used.
      */
-    public SmtpServer(int port, SmtpMessageHandler messageHandler, ThreadFactory threadFactory) {
+    public SmtpServer(int port, SmtpMessageHandler messageHandler, ExecutorService executor) {
         this.port = port;
         this.messageHandler = messageHandler!=null ? messageHandler : new DefaultSmtpMessageHandler();
         this.messageHandlerLock = new ReentrantLock();
-        this.threadFactory = threadFactory!=null ? threadFactory : Executors.defaultThreadFactory();
+        this.executor = executor!=null ? executor : Executors.newSingleThreadExecutor();
         this.listeners = new ArrayList<>(4);
         this.serverOptions = new SmtpServerOptions();
     }
@@ -282,8 +284,7 @@ public class SmtpServer implements AutoCloseable {
             serverSocket = new ServerSocket(port);
         }
 
-        localThread = threadFactory.newThread(new SmtpPacketListener());
-        localThread.start();
+        runningServer = executor.submit(new SmtpPacketListener());
 
         messageHandlerLock.lock();
         try { notifyStarted(); }
@@ -354,9 +355,9 @@ public class SmtpServer implements AutoCloseable {
         //will trigger a I/O exception in the running thread
         localServerSocket.close();
 
-        try { localThread.join(); }
-        catch(InterruptedException ie) { /* ignored */ }
-        localThread = null;
+        try { runningServer.get(); }
+        catch(ExecutionException | InterruptedException ie) { /* ignored */ }
+        runningServer = null;
 
         messageHandlerLock.lock();
         try { notifyClosed(); }

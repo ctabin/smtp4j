@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 /**
@@ -27,7 +27,7 @@ public class SmtpServerBuilder {
     private SmtpMessageHandler handler;
     private SmtpServerOptions options;
     private List<SmtpServerListener> listeners;
-    private ThreadFactory threadFactory;
+    private ExecutorService executor;
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
@@ -178,7 +178,7 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.concurrent.ThreadFactory)
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.concurrent.ExecutorService)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
@@ -186,13 +186,13 @@ public class SmtpServerBuilder {
     }
     
     /**
-     * Defines the {@link ThreadFactory} to use to handle the SMTP messages.
+     * Defines the {@link ExecutorService} to use to handle the SMTP messages.
      *
-     * @param threadFactory The thread factory.
+     * @param executor The {@code ExecutorService} to use or null.
      * @return This builder.
      */
-    public SmtpServerBuilder withThreadFactory(ThreadFactory threadFactory) {
-        this.threadFactory = threadFactory;
+    public SmtpServerBuilder withExecutorService(ExecutorService executor) {
+        this.executor = executor;
         return this;
     }
 
@@ -215,7 +215,7 @@ public class SmtpServerBuilder {
      * @return A new {@code SmtpServer} instance.
      */
     public SmtpServer build() {
-        SmtpServer server = new SmtpServer(port, handler, threadFactory);
+        SmtpServer server = new SmtpServer(port, handler, executor);
         if(options!=null) { server.setOptions(options); }
         if(listeners!=null) { listeners.forEach(l -> server.addListener(l)); }
         return server;
