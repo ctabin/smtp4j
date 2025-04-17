@@ -239,6 +239,20 @@ public class SmtpServerBuilder {
         listeners.add(listener);
         return this;
     }
+    
+    /**
+     * Defines the specified {@code timeout} (in milliseconds) for the {@code read()}
+     * operations on socket input. By default, this value is set to 10000.
+     *
+     * @param timeout The socket timeout or zero to disable timeout.
+     * @return This builder.
+     * @see SmtpServerOptions#socketTimeout
+     */
+    public SmtpServerBuilder withSocketTimeout(int timeout) {
+        if(options==null) { options = new SmtpServerOptions(); }
+        options.socketTimeout = timeout;
+        return this;
+    }
 
     /**
      * Builds the {@code SmtpServer}.
