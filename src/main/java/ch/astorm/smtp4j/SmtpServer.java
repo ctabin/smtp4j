@@ -373,7 +373,10 @@ public class SmtpServer implements AutoCloseable {
         public void run() {
             while(serverSocket!=null) {
                 try {
+                    //do not use try-with-resource here because socket will be handled in  thread
                     Socket socket = serverSocket.accept();
+                    socket.setSoTimeout(serverOptions.socketTimeout);
+                    
                     executor.submit(() -> {
                         messageHandlerLock.lock();
                         try(socket) { SmtpTransactionHandler.handle(SmtpServer.this, socket, m -> notifyMessage(m)); }

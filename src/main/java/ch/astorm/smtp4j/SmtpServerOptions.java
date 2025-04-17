@@ -99,4 +99,9 @@ public class SmtpServerOptions {
      * The users repository used for the authentication.
      */
     public UserRepository usersRepository = new SimpleUserRepository();
+    
+    /**
+     * The socket timeout in milliseconds.
+     */
+    public int socketTimeout = 10000;
 }
