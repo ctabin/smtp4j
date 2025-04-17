@@ -7,7 +7,6 @@ import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageReader;
 import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
-import ch.astorm.smtp4j.protocol.SmtpProtocolException;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
 import jakarta.mail.Authenticator;
 import jakarta.mail.PasswordAuthentication;
@@ -24,6 +23,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -38,11 +38,12 @@ public class SmtpServer implements AutoCloseable {
     private final SmtpMessageHandler messageHandler;
     private final ReentrantLock messageHandlerLock;
     private final List<SmtpServerListener> listeners;
-    private final ExecutorService executor;
+    private final Supplier<ExecutorService> executorSupplier;
     
     private volatile SmtpServerOptions serverOptions;
     private volatile ServerSocket serverSocket;
     private Future<?> runningServer;
+    private ExecutorService executor;
 
     /**
      * Default SMTP port.
@@ -74,13 +75,13 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      * @param messageHandler The {@code SmtpMessageHandler} used to receive messages or null to
      *             use a new {@link DefaultSmtpMessageHandler} instance.
-     * @param executor The {@link ExecutorService} to use or null. If null, {@link Executors#newSingleThreadExecutor()} will be used.
+     * @param executorSupplier The {@link ExecutorService} supplier to use or null. If null, {@link Executors#newWorkStealingPool()} will be used.
      */
-    public SmtpServer(int port, SmtpMessageHandler messageHandler, ExecutorService executor) {
+    public SmtpServer(int port, SmtpMessageHandler messageHandler, Supplier<ExecutorService> executorSupplier) {
         this.port = port;
         this.messageHandler = messageHandler!=null ? messageHandler : new DefaultSmtpMessageHandler();
         this.messageHandlerLock = new ReentrantLock();
-        this.executor = executor!=null ? executor : Executors.newSingleThreadExecutor();
+        this.executorSupplier = executorSupplier!=null ? executorSupplier : () -> Executors.newWorkStealingPool();
         this.listeners = new ArrayList<>(4);
         this.serverOptions = new SmtpServerOptions();
     }
@@ -284,6 +285,7 @@ public class SmtpServer implements AutoCloseable {
             serverSocket = new ServerSocket(port);
         }
 
+        executor = executorSupplier.get();
         runningServer = executor.submit(new SmtpPacketListener());
 
         messageHandlerLock.lock();
@@ -343,22 +345,24 @@ public class SmtpServer implements AutoCloseable {
     /**
      * Closes this {@code SmtpServer} instance and releases all the resources associated
      * to it. Once closed, it possible to restart it again.
+     * This method will block until all the current SMTP transaction being handled are completed.
      * If the server is already closed, this method does nothing.
      */
     @Override
-    public void close() throws IOException {
+    public void close() {
         if(isClosed()) { return; } //already closed
-
-        ServerSocket localServerSocket = serverSocket;
-        serverSocket = null;
-
+        
         //will trigger a I/O exception in the running thread
-        localServerSocket.close();
+        try (ServerSocket localServerSocket = serverSocket) { serverSocket = null; }
+        catch(Throwable t) { /* ignored */ }
 
         try { runningServer.get(); }
         catch(ExecutionException | InterruptedException ie) { /* ignored */ }
         runningServer = null;
 
+        try(ExecutorService localExecutor = executor) { executor = null; }
+        catch(Throwable t) { /* ignored */ }
+        
         messageHandlerLock.lock();
         try { notifyClosed(); }
         finally { messageHandlerLock.unlock(); }
@@ -368,12 +372,15 @@ public class SmtpServer implements AutoCloseable {
         @Override
         public void run() {
             while(serverSocket!=null) {
-                try(Socket socket = serverSocket.accept()) {
-                    messageHandlerLock.lock();
-                    try { SmtpTransactionHandler.handle(SmtpServer.this, socket, m -> notifyMessage(m)); }
-                    finally { messageHandlerLock.unlock(); }
-                } catch(SmtpProtocolException spe) {
-                    LOG.log(Level.WARNING, "Protocol Exception", spe);
+                try {
+                    Socket socket = serverSocket.accept();
+                    executor.submit(() -> {
+                        messageHandlerLock.lock();
+                        try(socket) { SmtpTransactionHandler.handle(SmtpServer.this, socket, m -> notifyMessage(m)); }
+                        catch(Throwable t) { LOG.log(Level.WARNING, "SMTP transaction ended unexpectedly", t); }
+                        finally { messageHandlerLock.unlock(); }
+                        return null;
+                    });
                 } catch(IOException ioe) {
                     /* can be generally safely ignored because occurs when the server is being closed */
                     LOG.log(Level.FINER, "I/O Exception", ioe);
