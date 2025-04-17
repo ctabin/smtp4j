@@ -17,7 +17,9 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Helper to build a new {@code SmtpServer}.
@@ -27,7 +29,7 @@ public class SmtpServerBuilder {
     private SmtpMessageHandler handler;
     private SmtpServerOptions options;
     private List<SmtpServerListener> listeners;
-    private ExecutorService executor;
+    private Supplier<ExecutorService> executorSupplier;
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
@@ -207,7 +209,7 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.concurrent.ExecutorService)
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
@@ -215,13 +217,13 @@ public class SmtpServerBuilder {
     }
     
     /**
-     * Defines the {@link ExecutorService} to use to handle the SMTP messages.
+     * Defines the {@link ExecutorService} supplier to use to handle the SMTP messages.
      *
-     * @param executor The {@code ExecutorService} to use or null.
+     * @param executorSupplier The {@code ExecutorService} to use or null (will default to {@link Executors#newWorkStealingPool()}).
      * @return This builder.
      */
-    public SmtpServerBuilder withExecutorService(ExecutorService executor) {
-        this.executor = executor;
+    public SmtpServerBuilder withExecutorService(Supplier<ExecutorService> executorSupplier) {
+        this.executorSupplier = executorSupplier;
         return this;
     }
 
@@ -244,7 +246,7 @@ public class SmtpServerBuilder {
      * @return A new {@code SmtpServer} instance.
      */
     public SmtpServer build() {
-        SmtpServer server = new SmtpServer(port, handler, executor);
+        SmtpServer server = new SmtpServer(port, handler, executorSupplier);
         if(options!=null) { server.setOptions(options); }
         if(listeners!=null) { listeners.forEach(l -> server.addListener(l)); }
         return server;
