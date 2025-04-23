@@ -78,7 +78,7 @@ public class SmtpServerOptions {
     public Function<String, String> ehloResponseFunction = h -> h!=null ? "smtp4j greets "+h : "OK";
     
     /**
-     * The maximum message size (in bytes). A value less or equal than zero disables
+     * The maximum message size (in bytes). A value less or equal to zero disables
      * the message size verification.
      * 
      * As per <a href="https://datatracker.ietf.org/doc/html/rfc1870">RFC1870</a>,
