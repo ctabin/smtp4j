@@ -7,7 +7,10 @@ import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageReader;
 import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
+import ch.astorm.smtp4j.protocol.DefaultSmtpTransactionHandler;
+import ch.astorm.smtp4j.protocol.DefaultSmtpTransactionHandler.MessageReceiver;
 import ch.astorm.smtp4j.protocol.SmtpTransactionHandler;
+import ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory;
 import jakarta.mail.Authenticator;
 import jakarta.mail.PasswordAuthentication;
 import jakarta.mail.Session;
@@ -38,6 +41,7 @@ public class SmtpServer implements AutoCloseable {
     private final ReentrantLock messageHandlerLock;
     private final List<SmtpServerListener> listeners;
     private final Supplier<ExecutorService> executorSupplier;
+    private final SmtpTransactionHandlerFactory handlerFactory;
     
     private volatile SmtpServerOptions options;
     private volatile ServerSocket serverSocket;
@@ -61,7 +65,7 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      */
     public SmtpServer(int port) {
-        this(port, null, null);
+        this(port, null, null, null);
     }
 
     /**
@@ -75,12 +79,14 @@ public class SmtpServer implements AutoCloseable {
      * @param messageHandler The {@code SmtpMessageHandler} used to receive messages or null to
      *             use a new {@link DefaultSmtpMessageHandler} instance.
      * @param executorSupplier The {@link ExecutorService} supplier to use or null. If null, {@link Executors#newWorkStealingPool()} will be used.
+     * @param handlerFactory The {@link SmtpTransactionHandlerFactory} to use or null. If null, new {@link DefaultSmtpTransactionHandler} instances will be used.
      */
-    public SmtpServer(int port, SmtpMessageHandler messageHandler, Supplier<ExecutorService> executorSupplier) {
+    public SmtpServer(int port, SmtpMessageHandler messageHandler, Supplier<ExecutorService> executorSupplier, SmtpTransactionHandlerFactory handlerFactory) {
         this.port = port;
         this.messageHandler = messageHandler!=null ? messageHandler : new DefaultSmtpMessageHandler();
         this.messageHandlerLock = new ReentrantLock();
         this.executorSupplier = executorSupplier!=null ? executorSupplier : () -> Executors.newWorkStealingPool();
+        this.handlerFactory = handlerFactory!=null ? handlerFactory : (s, m) -> new DefaultSmtpTransactionHandler(s, m);
         this.listeners = new ArrayList<>(4);
         this.options = new SmtpServerOptions();
     }
@@ -370,6 +376,8 @@ public class SmtpServer implements AutoCloseable {
     private class SmtpPacketListener implements Runnable {
         @Override
         public void run() {
+            MessageReceiver receiver = m -> notifyMessage(m);
+            
             while(serverSocket!=null) {
                 try {
                     //do not use try-with-resource here because socket will be handled in  thread
@@ -378,7 +386,7 @@ public class SmtpServer implements AutoCloseable {
                     
                     executor.submit(() -> {
                         messageHandlerLock.lock();
-                        try(socket) { SmtpTransactionHandler.handle(SmtpServer.this, socket, m -> notifyMessage(m)); }
+                        try(socket; SmtpTransactionHandler handler = handlerFactory.create(SmtpServer.this, receiver)) { handler.execute(socket); }
                         catch(Throwable t) { LOG.log(Level.WARNING, "SMTP transaction ended unexpectedly", t); }
                         finally { messageHandlerLock.unlock(); }
                         return null;
