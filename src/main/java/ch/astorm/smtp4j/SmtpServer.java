@@ -17,7 +17,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -40,7 +39,7 @@ public class SmtpServer implements AutoCloseable {
     private final List<SmtpServerListener> listeners;
     private final Supplier<ExecutorService> executorSupplier;
     
-    private volatile SmtpServerOptions serverOptions;
+    private volatile SmtpServerOptions options;
     private volatile ServerSocket serverSocket;
     private Future<?> runningServer;
     private ExecutorService executor;
@@ -83,7 +82,7 @@ public class SmtpServer implements AutoCloseable {
         this.messageHandlerLock = new ReentrantLock();
         this.executorSupplier = executorSupplier!=null ? executorSupplier : () -> Executors.newWorkStealingPool();
         this.listeners = new ArrayList<>(4);
-        this.serverOptions = new SmtpServerOptions();
+        this.options = new SmtpServerOptions();
     }
 
     /**
@@ -92,7 +91,7 @@ public class SmtpServer implements AutoCloseable {
      * @return The options.
      */
     public SmtpServerOptions getOptions() {
-        return serverOptions;
+        return options;
     }
     
     /**
@@ -102,7 +101,7 @@ public class SmtpServer implements AutoCloseable {
      */
     public void setOptions(SmtpServerOptions options) {
         if(options==null) { throw new IllegalArgumentException("options not defined"); }
-        this.serverOptions = options;
+        this.options = options;
     }
     
     /**
@@ -115,26 +114,26 @@ public class SmtpServer implements AutoCloseable {
     public Properties getSessionProperties() {
         if(port<=0) { throw new IllegalStateException("Dynamic port lookup: server must be started"); }
 
-        String protocol = serverOptions.protocol.name().toLowerCase();
+        String protocol = options.protocol.name().toLowerCase();
 
         Properties props = new Properties();
         props.setProperty("mail.transport.protocol", protocol);
         props.setProperty("mail.transport.protocol.rfc822", protocol);
         props.setProperty("mail."+protocol+".host", "localhost");
         props.setProperty("mail."+protocol+".port", ""+port);
-        if(serverOptions.startTLS) {
+        if(options.startTLS) {
             props.put("mail."+protocol+".starttls.enable", "true");
             props.put("mail."+protocol+".starttls.required", "true");
         }
-        if(serverOptions.startTLS || serverOptions.protocol==Protocol.SMTPS) {
+        if(options.startTLS || options.protocol==Protocol.SMTPS) {
             props.put("mail."+protocol+".ssl.checkserveridentity", "false");
             props.put("mail."+protocol+".ssl.trust", "*");
         }
-        if(serverOptions.authenticators!=null && !serverOptions.authenticators.isEmpty()) {
+        if(options.authenticators!=null && !options.authenticators.isEmpty()) {
             props.put("mail."+protocol+".auth", "true");
 
             //necessary for CRAM-MD5 because the authentication method is obsolete
-            if(serverOptions.authenticators.stream().map(a -> a.getName()).anyMatch(n -> n.equals("CRAM-MD5"))) {
+            if(options.authenticators.stream().map(a -> a.getName()).anyMatch(n -> n.equals("CRAM-MD5"))) {
                 props.put("mail."+protocol+".sasl.enable", "true");
             }
         }
@@ -357,7 +356,7 @@ public class SmtpServer implements AutoCloseable {
         catch(Throwable t) { /* ignored */ }
 
         try { runningServer.get(); }
-        catch(ExecutionException | InterruptedException ie) { /* ignored */ }
+        catch(Throwable ie) { /* ignored */ }
         runningServer = null;
 
         try(ExecutorService localExecutor = executor) { executor = null; }
@@ -375,7 +374,7 @@ public class SmtpServer implements AutoCloseable {
                 try {
                     //do not use try-with-resource here because socket will be handled in  thread
                     Socket socket = serverSocket.accept();
-                    socket.setSoTimeout(serverOptions.socketTimeout);
+                    socket.setSoTimeout(options.socketTimeout);
                     
                     executor.submit(() -> {
                         messageHandlerLock.lock();
