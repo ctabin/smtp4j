@@ -10,6 +10,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
+import java.util.Properties;
 import java.util.Random;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -33,6 +34,12 @@ public class CramMD5AuthenticationHandler implements SmtpAuthenticatorHandler {
         return "CRAM-MD5";
     }
 
+    @Override
+    public void setSessionProperties(Properties properties, SmtpServerOptions options) {
+        String protocolName = options.protocol.name().toLowerCase();
+        properties.put("mail."+protocolName+".sasl.enable", "true");
+    }
+    
     @Override
     public boolean authenticate(SmtpCommand command, SmtpExchangeHandler exchangeHandler, SmtpServerOptions options) throws SmtpProtocolException {
         long rnd = (long)(RANDOM.nextDouble()*900000L)+100000L;
