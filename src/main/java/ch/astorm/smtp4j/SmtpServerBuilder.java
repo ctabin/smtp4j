@@ -8,7 +8,9 @@ import ch.astorm.smtp4j.auth.PlainAuthenticationHandler;
 import ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
+import ch.astorm.smtp4j.protocol.DefaultSmtpTransactionHandler;
 import ch.astorm.smtp4j.protocol.SmtpCommand;
+import ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory;
 import ch.astorm.smtp4j.secure.DefaultSSLContextProvider;
 import ch.astorm.smtp4j.secure.SSLContextProvider;
 import ch.astorm.smtp4j.store.SimpleUserRepository;
@@ -30,6 +32,7 @@ public class SmtpServerBuilder {
     private SmtpServerOptions options;
     private List<SmtpServerListener> listeners;
     private Supplier<ExecutorService> executorSupplier;
+    private SmtpTransactionHandlerFactory handleFactory;
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
@@ -209,7 +212,7 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier)
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
@@ -221,9 +224,22 @@ public class SmtpServerBuilder {
      *
      * @param executorSupplier The {@code ExecutorService} to use or null (will default to {@link Executors#newWorkStealingPool()}).
      * @return This builder.
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory)
      */
     public SmtpServerBuilder withExecutorService(Supplier<ExecutorService> executorSupplier) {
         this.executorSupplier = executorSupplier;
+        return this;
+    }
+    
+    /**
+     * Defines the {@link SmtpTransactionHandlerFactory} to use to handle SMTP transactions.
+     *
+     * @param factory The {@code SmtpTransactionHandlerFactory} to use or null (will default to {@link DefaultSmtpTransactionHandler}).
+     * @return This builder.
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory)
+     */
+    public SmtpServerBuilder withSmtpTransactionHandlerFactory(SmtpTransactionHandlerFactory factory) {
+        this.handleFactory = factory;
         return this;
     }
 
@@ -260,7 +276,7 @@ public class SmtpServerBuilder {
      * @return A new {@code SmtpServer} instance.
      */
     public SmtpServer build() {
-        SmtpServer server = new SmtpServer(port, handler, executorSupplier);
+        SmtpServer server = new SmtpServer(port, handler, executorSupplier, handleFactory);
         if(options!=null) { server.setOptions(options); }
         if(listeners!=null) { listeners.forEach(l -> server.addListener(l)); }
         return server;
