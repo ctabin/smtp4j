@@ -376,19 +376,21 @@ public class SmtpServer implements AutoCloseable {
     private class SmtpPacketListener implements Runnable {
         @Override
         public void run() {
-            MessageReceiver receiver = m -> notifyMessage(m);
+            MessageReceiver receiver = m -> {
+                messageHandlerLock.lock();
+                try { notifyMessage(m); }
+                finally {messageHandlerLock.unlock(); }
+            };
             
             while(serverSocket!=null) {
                 try {
-                    //do not use try-with-resource here because socket will be handled in  thread
+                    //do not use try-with-resource here because socket will be handled in a new thread
                     Socket socket = serverSocket.accept();
                     socket.setSoTimeout(options.socketTimeout);
                     
                     executor.submit(() -> {
-                        messageHandlerLock.lock();
                         try(socket; SmtpTransactionHandler handler = handlerFactory.create(SmtpServer.this, receiver)) { handler.execute(socket); }
                         catch(Throwable t) { LOG.log(Level.WARNING, "SMTP transaction ended unexpectedly", t); }
-                        finally { messageHandlerLock.unlock(); }
                         return null;
                     });
                 } catch(IOException ioe) {
