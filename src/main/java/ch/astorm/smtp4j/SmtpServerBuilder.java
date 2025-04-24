@@ -16,6 +16,7 @@ import ch.astorm.smtp4j.secure.SSLContextProvider;
 import ch.astorm.smtp4j.store.SimpleUserRepository;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -36,7 +37,8 @@ public class SmtpServerBuilder {
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
-     * If the port is undefined, the server will make a dynamic lookup when it is started.
+     * If the port is less or equal to zero, the server will make a dynamic lookup when it is started.
+     * By default, the port is undefined.
      *
      * @param port The port.
      * @return This builder.
@@ -60,7 +62,7 @@ public class SmtpServerBuilder {
     }
     
     /**
-     * Defines if the {@code STARTTLS} support is enabled (false by default).If true,
+     * Defines if the {@code STARTTLS} support is enabled (false by default). If true,
      * then a {@link #withSSLContextProvider(ch.astorm.smtp4j.secure.SSLContextProvider) SSL context provider}
      * must be set.
      *
@@ -75,9 +77,8 @@ public class SmtpServerBuilder {
     }
     
     /**
-     * Defines if secure transport layer is required.
-     * This value is used only when {@link #withStartTLSRequired(boolean) TLS support}
-     * is enabled.
+     * Defines if secure transport layer is required (false by default). This value is used only when
+     * {@link #withStartTLSRequired(boolean) TLS support} is enabled.
      * 
      * @param tlsRequired True if {@code STARTTLS} is required once connected.
      * @return This builder.
@@ -90,8 +91,8 @@ public class SmtpServerBuilder {
     }
 
     /**
-     * Defines the protocol to used.
-     * If the {@link Protocol#SMTPS} is used, then a {@link #withSSLContextProvider(ch.astorm.smtp4j.secure.SSLContextProvider) SSL context provider}
+     * Defines the protocol to used. If the {@link Protocol#SMTPS} is used, then a
+     * {@link #withSSLContextProvider(ch.astorm.smtp4j.secure.SSLContextProvider) SSL context provider}
      * must be set.
      *
      * @param protocol The protocol (by default {@link Protocol#SMTP}.)
@@ -105,7 +106,8 @@ public class SmtpServerBuilder {
     }
     
     /**
-     * Defines the {@link SSLContextProvider} to use when negotiating SSL.
+     * Defines the {@link SSLContextProvider} to use when negotiating SSL. By default,
+     * the SSL context provider is undefined.
      *
      * @param provider The provider.
      * @return This builder.
@@ -132,7 +134,7 @@ public class SmtpServerBuilder {
     }
     
     /**
-     * Defines the {@link PrintStream} to use for debugging.If null, then no debug
+     * Defines the {@link PrintStream} to use for debugging. If null, then no debug
      * output will be printed.
      *
      * @param stream The debug stream.
@@ -160,6 +162,7 @@ public class SmtpServerBuilder {
 
     /**
      * Defines a custom function to generate the {@link SmtpCommand.Type#EHLO} response.
+     * The function input is the parameter sent by the client in the protocol and might be null.
      *
      * @param func The function to apply.
      * @return This builder.
@@ -174,7 +177,8 @@ public class SmtpServerBuilder {
     /**
      * Adds the given {@code handler} to authenticate a client.
      * This method can be called multiple times to allow many authentication schemes.
-     * Since the authentication will be required, you'll need to {@link #withUser(java.lang.String, java.lang.String) declare some users}.
+     * Since the authentication will be required, you'll need to {@link #withUser(java.lang.String, java.lang.String) declare some users}
+     * otherwise all the connections will be rejected.
      *
      * @param handler The authentication handler.
      * @return This builder.
@@ -194,6 +198,8 @@ public class SmtpServerBuilder {
      * This method can be called multiple times to add users.
      * Users are not linked to mailboxes. They are only used in the context of
      * the authentication.
+     * It is useless to register users if there is no {@link #withAuthenticator(ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler) authentication scheme}
+     * registered.
      *
      * @param user The username.
      * @param password The associated password.
@@ -244,7 +250,7 @@ public class SmtpServerBuilder {
     }
 
     /**
-     * Adds the specified {@code listener} once de server is build.
+     * Adds the specified {@code listener} once de server is built.
      *
      * @param listener The listener to add.
      * @return This builder.
@@ -263,6 +269,7 @@ public class SmtpServerBuilder {
      * @param timeout The socket timeout or zero to disable timeout.
      * @return This builder.
      * @see SmtpServerOptions#socketTimeout
+     * @see Socket#setSoTimeout(int)
      */
     public SmtpServerBuilder withSocketTimeout(int timeout) {
         if(options==null) { options = new SmtpServerOptions(); }
@@ -273,7 +280,7 @@ public class SmtpServerBuilder {
     /**
      * Builds the {@code SmtpServer}.
      *
-     * @return A new {@code SmtpServer} instance.
+     * @return A new {@code SmtpServer} instance (not started).
      */
     public SmtpServer build() {
         SmtpServer server = new SmtpServer(port, handler, executorSupplier, handleFactory);
@@ -284,8 +291,9 @@ public class SmtpServerBuilder {
 
     /**
      * Builds the {@code SmtpServer} and starts it.
-     *
-     * @return A new {@code SmtpServer} instance.
+     * This is equivalent to call {@link #build()} and then {@link SmtpServer#start()}.
+     * 
+     * @return A new {@code SmtpServer} instance (started).
      */
     public SmtpServer start() throws IOException {
         SmtpServer server = build();
