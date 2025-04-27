@@ -6,6 +6,7 @@ import ch.astorm.smtp4j.auth.CramMD5AuthenticationHandler;
 import ch.astorm.smtp4j.auth.LoginAuthenticationHandler;
 import ch.astorm.smtp4j.auth.PlainAuthenticationHandler;
 import ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler;
+import ch.astorm.smtp4j.connection.ConnectionListener;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
 import ch.astorm.smtp4j.protocol.DefaultSmtpTransactionHandler;
@@ -34,6 +35,7 @@ public class SmtpServerBuilder {
     private List<SmtpServerListener> listeners;
     private Supplier<ExecutorService> executorSupplier;
     private SmtpTransactionHandlerFactory handleFactory;
+    private ConnectionListener connectionListener;
 
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
@@ -218,7 +220,7 @@ public class SmtpServerBuilder {
      *
      * @param messageHandler The message handler.
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory)
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory, ch.astorm.smtp4j.connection.ConnectionListener)
      */
     public SmtpServerBuilder withMessageHandler(SmtpMessageHandler messageHandler) {
         this.handler = messageHandler;
@@ -230,7 +232,7 @@ public class SmtpServerBuilder {
      *
      * @param executorSupplier The {@code ExecutorService} to use or null (will default to {@link Executors#newWorkStealingPool()}).
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory)
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory, ch.astorm.smtp4j.connection.ConnectionListener)
      */
     public SmtpServerBuilder withExecutorService(Supplier<ExecutorService> executorSupplier) {
         this.executorSupplier = executorSupplier;
@@ -242,7 +244,7 @@ public class SmtpServerBuilder {
      *
      * @param factory The {@code SmtpTransactionHandlerFactory} to use or null (will default to {@link DefaultSmtpTransactionHandler}).
      * @return This builder.
-     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory)
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory, ch.astorm.smtp4j.connection.ConnectionListener)
      */
     public SmtpServerBuilder withSmtpTransactionHandlerFactory(SmtpTransactionHandlerFactory factory) {
         this.handleFactory = factory;
@@ -278,12 +280,24 @@ public class SmtpServerBuilder {
     }
 
     /**
+     * Sets the specified {@code connectionListener}.
+     *
+     * @param connectionListener The connection listener or null.
+     * @return This builder.
+     * @see SmtpServer#SmtpServer(int, ch.astorm.smtp4j.core.SmtpMessageHandler, java.util.function.Supplier, ch.astorm.smtp4j.protocol.SmtpTransactionHandlerFactory, ch.astorm.smtp4j.connection.ConnectionListener)
+     */
+    public SmtpServerBuilder withConnectionListener(ConnectionListener connectionListener) {
+        this.connectionListener = connectionListener;
+        return this;
+    }
+    
+    /**
      * Builds the {@code SmtpServer}.
      *
      * @return A new {@code SmtpServer} instance (not started).
      */
     public SmtpServer build() {
-        SmtpServer server = new SmtpServer(port, handler, executorSupplier, handleFactory);
+        SmtpServer server = new SmtpServer(port, handler, executorSupplier, handleFactory, connectionListener);
         if(options!=null) { server.setOptions(options); }
         if(listeners!=null) { listeners.forEach(l -> server.addListener(l)); }
         return server;

@@ -1,11 +1,14 @@
 
 package ch.astorm.smtp4j;
 
+import ch.astorm.smtp4j.connection.ConnectionListener;
 import ch.astorm.smtp4j.core.DefaultSmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.protocol.SmtpProtocolConstants;
 import ch.astorm.smtp4j.util.MimeMessageBuilder;
 import jakarta.mail.MessagingException;
+import java.io.IOException;
+import java.net.InetAddress;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -115,6 +118,23 @@ public class SmtpServerTest {
                 body("Hello!").
                 send());
             assertEquals(SmtpProtocolConstants.CODE_TRANSACTION_FAILED+" Message refused", me.getMessage().trim());
+        }
+    }
+    
+    @Test
+    public void testSimpleFirewall() throws Exception {
+        SmtpServerBuilder builder = new SmtpServerBuilder();
+        builder.withConnectionListener((InetAddress remoteHost) -> {
+            throw new IOException("connection refused");
+        });
+        
+        try(SmtpServer server = builder.start()) {
+            MessagingException me = assertThrows(MessagingException.class, () -> new MimeMessageBuilder(server).
+                to("test@astorm.ch").
+                subject("Test").
+                body("Hello!").
+                send());
+            assertEquals("Got bad greeting from SMTP host: localhost, port: 1024, response: [EOF]", me.getMessage().trim());
         }
     }
 }
