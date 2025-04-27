@@ -8,18 +8,17 @@ Simple API to fake an SMTP server for Unit testing (and more).
 
 ## About this project
 
-This API is inspired from [dumbster](https://github.com/kirviq/dumbster) with the following improvements:
-- Dynamic port lookup
-- Support of MIME messages with attachments
-- Support of secure channel communication (`SMTPS` and `STARTTLS`)
-- Support of `PLAIN`,`LOGIN` and `CRAM-MD5` authentication schemes
-- Support of message size limit
-- Access to SMTP exchanges
-- Improved multi-threading support
-- Up-to-date dependencies
-- Extended tests
-- Numerous bugfixes and features
-
+This API is inspired from [dumbster](https://github.com/kirviq/dumbster) and provides the following features:
+- [Dynamic port lookup](#smtp-server-port).
+- Support of MIME messages with [attachments](#attachments).
+- Support of secure channel communication ([`SMTPS`](#secure-channel-smtps) and [`STARTTLS`](#switch-to-secure-channel-starttls)).
+- Support of `PLAIN`,`LOGIN` and `CRAM-MD5` [authentication schemes](#authentication-schemes).
+- Support of [message size limit](#message-size-limit).
+- Support of [connection listeners](#connection-listener) (firewall).
+- Access to SMTP [exchanges](#low-level-smtp-exchanges).
+- Improved multi-threading support.
+- Up-to-date dependencies.
+- Extended unit tests.
 
 Here is the compatibility map of this API:
 
@@ -486,6 +485,24 @@ the following properties:
 | `mail.smtp.sasl.enable` | `true` (only with `CRAM-MD5`) |
 
 **Note**: The authentication scheme `CRAM-MD5` is [deprecated](https://en.wikipedia.org/wiki/CRAM-MD5) and should not be used in production.
+
+### Connection listener
+
+Once a `Socket` is connected, prior to any SMTP exchange the API will notify the listener, allowing
+to easily implement a simple firewall. Simply throw an `IOException` to close the connection to
+the remote host.
+
+```java
+SmtpServerBuilder builder = new SmtpServerBuilder();
+builder.withConnectionListener((InetAddress remoteHost) -> {
+    String host = remoteHost.getHostAddress();
+    if(!host.equals("127.0.0.1")) { throw new IOException("connection refused from "+host); }
+});
+
+try(SmtpServer server = builder.start()) {
+    //any connection from any other IP than localhost will be denied
+}
+```
 
 ### Debugging Internals
 

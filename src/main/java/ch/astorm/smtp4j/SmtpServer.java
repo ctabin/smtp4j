@@ -2,6 +2,7 @@
 package ch.astorm.smtp4j;
 
 import ch.astorm.smtp4j.SmtpServerOptions.Protocol;
+import ch.astorm.smtp4j.connection.ConnectionListener;
 import ch.astorm.smtp4j.core.SmtpMessage;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpMessageHandler.SmtpMessageReader;
@@ -39,9 +40,10 @@ public class SmtpServer implements AutoCloseable {
     private int port;
     private final SmtpMessageHandler messageHandler;
     private final ReentrantLock messageHandlerLock;
-    private final List<SmtpServerListener> listeners;
+    private final List<SmtpServerListener> serverListeners;
     private final Supplier<ExecutorService> executorSupplier;
     private final SmtpTransactionHandlerFactory handlerFactory;
+    private final ConnectionListener connectionListener;
     
     private volatile SmtpServerOptions options;
     private volatile ServerSocket serverSocket;
@@ -65,7 +67,7 @@ public class SmtpServer implements AutoCloseable {
      *             is called.
      */
     public SmtpServer(int port) {
-        this(port, null, null, null);
+        this(port, null, null, null, null);
     }
 
     /**
@@ -80,14 +82,16 @@ public class SmtpServer implements AutoCloseable {
      *             use a new {@link DefaultSmtpMessageHandler} instance.
      * @param executorSupplier The {@link ExecutorService} supplier to use or null. If null, {@link Executors#newWorkStealingPool()} will be used.
      * @param handlerFactory The {@link SmtpTransactionHandlerFactory} to use or null. If null, new {@link DefaultSmtpTransactionHandler} instances will be used.
+     * @param connectionListener The {@code ConnectionListener} to use or null (accepts all the connections).
      */
-    public SmtpServer(int port, SmtpMessageHandler messageHandler, Supplier<ExecutorService> executorSupplier, SmtpTransactionHandlerFactory handlerFactory) {
+    public SmtpServer(int port, SmtpMessageHandler messageHandler, Supplier<ExecutorService> executorSupplier, SmtpTransactionHandlerFactory handlerFactory, ConnectionListener connectionListener) {
         this.port = port;
         this.messageHandler = messageHandler!=null ? messageHandler : new DefaultSmtpMessageHandler();
         this.messageHandlerLock = new ReentrantLock();
         this.executorSupplier = executorSupplier!=null ? executorSupplier : () -> Executors.newWorkStealingPool();
         this.handlerFactory = handlerFactory!=null ? handlerFactory : (s, m) -> new DefaultSmtpTransactionHandler(s, m);
-        this.listeners = new ArrayList<>(4);
+        this.connectionListener = connectionListener;
+        this.serverListeners = new ArrayList<>(4);
         this.options = new SmtpServerOptions();
     }
 
@@ -305,7 +309,7 @@ public class SmtpServer implements AutoCloseable {
      * @param listener The listener to add.
      */
     public void addListener(SmtpServerListener listener) {
-        this.listeners.add(listener);
+        this.serverListeners.add(listener);
     }
 
     /**
@@ -315,7 +319,7 @@ public class SmtpServer implements AutoCloseable {
      * @return True if the listener has been removed.
      */
     public boolean removeListener(SmtpServerListener listener) {
-        return this.listeners.remove(listener);
+        return this.serverListeners.remove(listener);
     }
 
     /**
@@ -325,22 +329,22 @@ public class SmtpServer implements AutoCloseable {
      * @return The listeners.
      */
     public List<SmtpServerListener> getListeners() {
-        return this.listeners;
+        return this.serverListeners;
     }
 
     private void notifyStarted() {
         messageHandler.notifyStart(this);
-        listeners.forEach(l -> l.notifyStart(this));
+        serverListeners.forEach(l -> l.notifyStart(this));
     }
 
     private void notifyClosed() {
         messageHandler.notifyClose(this);
-        listeners.forEach(l -> l.notifyClose(this));
+        serverListeners.forEach(l -> l.notifyClose(this));
     }
 
     private void notifyMessage(SmtpMessage message) {
         messageHandler.notifyMessage(this, message);
-        listeners.forEach(l -> l.notifyMessage(this, message));
+        serverListeners.forEach(l -> l.notifyMessage(this, message));
     }
 
     /**
@@ -375,7 +379,7 @@ public class SmtpServer implements AutoCloseable {
             MessageReceiver receiver = m -> {
                 messageHandlerLock.lock();
                 try { notifyMessage(m); }
-                finally {messageHandlerLock.unlock(); }
+                finally { messageHandlerLock.unlock(); }
             };
             
             while(serverSocket!=null) {
@@ -383,15 +387,23 @@ public class SmtpServer implements AutoCloseable {
                     //do not use try-with-resource here because socket will be handled in a new thread
                     Socket socket = serverSocket.accept();
                     socket.setSoTimeout(options.socketTimeout);
+                    if(connectionListener!=null) {
+                        try {
+                            connectionListener.connected(socket.getInetAddress());
+                        } catch(Throwable t) {
+                            socket.close();
+                            continue;
+                        }
+                    }
                     
                     executor.submit(() -> {
                         try(socket; SmtpTransactionHandler handler = handlerFactory.create(SmtpServer.this, receiver)) { handler.execute(socket); }
                         catch(Throwable t) { LOG.log(Level.WARNING, "SMTP transaction ended unexpectedly", t); }
                         return null;
                     });
-                } catch(IOException ioe) {
+                } catch(Throwable t) {
                     /* can be generally safely ignored because occurs when the server is being closed */
-                    LOG.log(Level.FINER, "I/O Exception", ioe);
+                    LOG.log(Level.FINER, "Exception caught", t);
                 }
             }
         }
