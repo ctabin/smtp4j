@@ -16,7 +16,7 @@ This API is inspired from [dumbster](https://github.com/kirviq/dumbster) and pro
 - Support of [message size limit](#message-size-limit).
 - Support of [connection listeners](#connection-listener) (firewall).
 - Access to SMTP [exchanges](#low-level-smtp-exchanges).
-- Improved multi-threading support.
+- Improved [multi-threading](#multithreading) support.
 - Up-to-date dependencies.
 - Extended unit tests.
 
@@ -501,6 +501,20 @@ builder.withConnectionListener((InetAddress remoteHost) -> {
 
 try(SmtpServer server = builder.start()) {
     //any connection from any other IP than localhost will be denied
+}
+```
+
+### Multithreading
+
+The builder allows you to specified an `ExecutorService` to use for thread handling.
+
+```java
+SmtpServerBuilder builder = new SmtpServerBuilder();
+builder.withExecutorService(() -> Executors.newWorkStealingPool());
+
+try(SmtpServer server = builder.start()) {
+    //the executor service is created once the SMTP server is started and 
+    //shut down when stopped
 }
 ```
 
