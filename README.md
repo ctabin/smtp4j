@@ -12,7 +12,7 @@ This API is inspired from [dumbster](https://github.com/kirviq/dumbster) and pro
 - [Dynamic port lookup](#smtp-server-port).
 - Support of MIME messages with [attachments](#attachments).
 - Support of secure channel communication ([`SMTPS`](#secure-channel-smtps) and [`STARTTLS`](#switch-to-secure-channel-starttls)).
-- Support of `PLAIN`,`LOGIN` and `CRAM-MD5` [authentication schemes](#authentication-schemes).
+- Support of `PLAIN`,`LOGIN`, `CRAM-MD5` and `XOAUTH2` [authentication schemes](#authentication-schemes).
 - Support of [message size limit](#message-size-limit).
 - Support of [connection listeners](#connection-listener) (firewall).
 - Access to SMTP [exchanges](#low-level-smtp-exchanges).
@@ -438,7 +438,7 @@ When the `STARTTLS` support is enabled, the following SMTP properties are set wh
 
 ### Authentication schemes
 
-The `PLAIN`, `LOGIN` and `CRAM-MD5` authentication schemes are natively supported. Once an authentication scheme is added,
+The `PLAIN`, `LOGIN`, `CRAM-MD5` and `XOAUTH2` authentication schemes are natively supported. Once an authentication scheme is added,
 it implies that at least one user is declared otherwise all the connections will be rejected.
 
 ```java
@@ -467,6 +467,7 @@ try(SmtpServer smtpServer = new SmtpServerBuilder().
     withAuthenticator(PlainAuthenticationHandler.INSTANCE).
     withAuthenticator(LoginAuthenticationHandler.INSTANCE).
     withAuthenticator(CramMD5AuthenticationHandler.INSTANCE).
+    withAuthenticator(XOAuth2AuthenticationHandler.INSTANCE).
     withUser("jdoe", "somePassword").
     withUser("asmith", "otherPassword").
     withUser("mwindu", "customPasword").
@@ -482,7 +483,8 @@ the following properties:
 | Property | Value |
 | -------- | ----- |
 | `mail.smtp.auth` | `true` |
-| `mail.smtp.sasl.enable` | `true` (only with `CRAM-MD5`) |
+| `mail.smtp.sasl.enable` | `true` (only with `CRAM-MD5` and `XOAUTH2`) |
+| `mail.smtp.sasl.mechanisms` | `XOAUTH2` (only with `XOAUTH2`) |
 
 **Note**: The authentication scheme `CRAM-MD5` is [deprecated](https://en.wikipedia.org/wiki/CRAM-MD5) and should not be used in production.
 
