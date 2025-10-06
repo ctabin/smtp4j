@@ -168,11 +168,11 @@
     </plugins>
   </build>
   <dependencies>
-    <!-- jakarta.mail API -->
+    <!-- angus-mail API -->
     <dependency>
-      <groupId>com.sun.mail</groupId>
-      <artifactId>jakarta.mail</artifactId>
-      <version>2.0.2</version>
+      <groupId>org.eclipse.angus</groupId>
+      <artifactId>angus-mail</artifactId>
+      <version>2.0.5</version>
     </dependency>
     <!-- JUnit -->
     <dependency>
