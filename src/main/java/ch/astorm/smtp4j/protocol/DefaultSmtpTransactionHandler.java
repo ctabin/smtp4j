@@ -258,8 +258,9 @@ public class DefaultSmtpTransactionHandler implements AutoCloseable, SmtpTransac
 
                 recipients = new ArrayList<>();
                 while(commandType==Type.RECIPIENT) {
-                    String enbraced = command.getParameter(); //enclosed: <mail_value>
-                    recipients.add(enbraced.substring(1, enbraced.length()-1));
+                    String enbraced = command.getParameter(); //enclosed: <mail_value> [SP <rcpt-parameters>]
+                    int endMail = enbraced.indexOf('>');
+                    recipients.add(enbraced.substring(1, endMail));
                     reply(SmtpProtocolConstants.CODE_OK, "OK");
                     
                     command = nextCommand();
