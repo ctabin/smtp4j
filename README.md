@@ -438,8 +438,18 @@ When the `STARTTLS` support is enabled, the following SMTP properties are set wh
 
 ### Authentication schemes
 
-The `PLAIN`, `LOGIN`, `CRAM-MD5` and `XOAUTH2` authentication schemes are natively supported. Once an authentication scheme is added,
-it implies that at least one user is declared otherwise all the connections will be rejected.
+The following authentication schemes are supported natively in smtp4j:
+
+| Name | Instance |
+| ---- | -------- |
+| PLAIN | `PlainAuthenticationHandler.INSTANCE` |
+| LOGIN | `LoginAuthenticationHandler.INSTANCE` |
+| CRAM-MD5 | `CramMD5AuthenticationHandler.INSTANCE` |
+| XOAUTH2 | `XOAuth2AuthenticationHandler.INSTANCE` |
+
+All those handlers are listed in `SmtpServerBuilder.AUTH_HANDLERS`.
+
+Once an authentication scheme is added, it implies that at least one user is declared otherwise all the connections will be rejected.
 
 ```java
 try(SmtpServer smtpServer = new SmtpServerBuilder().
@@ -464,10 +474,7 @@ try(SmtpServer smtpServer = new SmtpServerBuilder().
 It is possible to support multiple authentication schemes and users:
 ```java
 try(SmtpServer smtpServer = new SmtpServerBuilder().
-    withAuthenticator(PlainAuthenticationHandler.INSTANCE).
-    withAuthenticator(LoginAuthenticationHandler.INSTANCE).
-    withAuthenticator(CramMD5AuthenticationHandler.INSTANCE).
-    withAuthenticator(XOAuth2AuthenticationHandler.INSTANCE).
+    withAuthentication().
     withUser("jdoe", "somePassword").
     withUser("asmith", "otherPassword").
     withUser("mwindu", "customPasword").

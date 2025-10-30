@@ -14,8 +14,7 @@ public class SmtpServerAuthMultipleSchemesProtocolTest {
     public void testMultipleAuthSchemes() throws Exception {
         SmtpServerBuilder builder = new SmtpServerBuilder();
         try(SmtpServer smtpServer = builder.
-            withAuthenticator(PlainAuthenticationHandler.INSTANCE).
-            withAuthenticator(LoginAuthenticationHandler.INSTANCE).
+            withAuthentication().
             withUser("jdoe", "jpasswd").
             withDebugStream(System.err).
             withPort(1025).
