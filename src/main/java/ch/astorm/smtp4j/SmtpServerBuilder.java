@@ -6,6 +6,7 @@ import ch.astorm.smtp4j.auth.CramMD5AuthenticationHandler;
 import ch.astorm.smtp4j.auth.LoginAuthenticationHandler;
 import ch.astorm.smtp4j.auth.PlainAuthenticationHandler;
 import ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler;
+import ch.astorm.smtp4j.auth.XOAuth2AuthenticationHandler;
 import ch.astorm.smtp4j.connection.ConnectionListener;
 import ch.astorm.smtp4j.core.SmtpMessageHandler;
 import ch.astorm.smtp4j.core.SmtpServerListener;
@@ -37,6 +38,15 @@ public class SmtpServerBuilder {
     private SmtpTransactionHandlerFactory handleFactory;
     private ConnectionListener connectionListener;
 
+    /**
+     * List of all SMTP authenticators supported by smtp4j natively.
+     */
+    public static List<SmtpAuthenticatorHandler> AUTH_HANDLERS = List.of(
+        PlainAuthenticationHandler.INSTANCE,
+        LoginAuthenticationHandler.INSTANCE,
+        CramMD5AuthenticationHandler.INSTANCE,
+        XOAuth2AuthenticationHandler.INSTANCE);
+    
     /**
      * Defines the port on which the {@code SmtpServer} will listen to.
      * If the port is less or equal to zero, the server will make a dynamic lookup when it is started.
@@ -177,6 +187,21 @@ public class SmtpServerBuilder {
     }
 
     /**
+     * Register all the native supported authenticators from smtp4j.
+     * This is equivalent to call {@link #withAuthenticator(ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler)} for
+     * each instance in {@link #AUTH_HANDLERS}.
+     *
+     * @return This builder.
+     * @see #withAuthenticator(ch.astorm.smtp4j.auth.SmtpAuthenticatorHandler)
+     * @see #AUTH_HANDLERS
+     * @see SmtpServerOptions#authenticators
+     */
+    public SmtpServerBuilder withAuthentication() {
+        AUTH_HANDLERS.forEach(a -> withAuthenticator(a));
+        return this;
+    }
+    
+    /**
      * Adds the given {@code handler} to authenticate a client.
      * This method can be called multiple times to allow many authentication schemes.
      * Since the authentication will be required, you'll need to {@link #withUser(java.lang.String, java.lang.String) declare some users}
@@ -187,6 +212,7 @@ public class SmtpServerBuilder {
      * @see PlainAuthenticationHandler#INSTANCE
      * @see LoginAuthenticationHandler#INSTANCE
      * @see CramMD5AuthenticationHandler#INSTANCE
+     * @see XOAuth2AuthenticationHandler#INSTANCE
      * @see SmtpServerOptions#authenticators
      */
     public SmtpServerBuilder withAuthenticator(SmtpAuthenticatorHandler handler) {
