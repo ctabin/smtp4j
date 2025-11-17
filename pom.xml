@@ -100,7 +100,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>3.1.1</version>
+        <version>3.2.0</version>
       </plugin>
       <!-- Maven central distribution on https://central.sonatype.com -->
       <plugin>
@@ -173,19 +173,19 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
-      <version>6.0.0</version>
+      <version>6.0.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-suite-engine</artifactId>
-      <version>6.0.0</version>
+      <version>6.0.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-launcher</artifactId>
-      <version>6.0.0</version>
+      <version>6.0.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
